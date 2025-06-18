@@ -32,7 +32,12 @@ export const getAllApplicationService = async (req: Request) => {
       skip,
       take,
       orderBy: { id: "desc" },
-      where: whereClause,
+      where: {
+        ...whereClause,
+        folder: {
+          status: "IN_PRODUCTION",
+        },
+      },
       include: {
         profile: {
           include: {
