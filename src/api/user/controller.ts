@@ -1,4 +1,4 @@
-/* eslint-disable max-nested-callbacks */
+ 
 import { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
 
@@ -10,18 +10,14 @@ import {
   isPhoneNumberTaken,
 } from "./lib";
 
-import { ActionType } from "@prisma/client";
 import { sendErrorResponse, sendSuccessResponse } from "../../api/lib";
 import { prisma } from "../../prisma";
 import { dataTokenPayload } from "../../utils/lib";
 import {
-  createUserLogService,
   createUserServicer,
   findUserServicer,
-  getAggregationUserListServices,
   getAllUserService,
   getOneUserServicer,
-  getUserLogService,
   updateUserAccountService,
 } from "./service";
 
@@ -42,22 +38,22 @@ export const getManyUserController = async (req: Request, res: Response) => {
   }
 };
 
-export const getUserLogController = async (req: Request, res: Response) => {
-  try {
-    const result = await getUserLogService(req);
-    res.json({
-      status: "ok",
-      message: "success",
-      ...result,
-    });
-  } catch (error) {
-    logger.error(error);
-    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-      status: "error",
-      message: "Failed to fetch office logs",
-    });
-  }
-};
+// export const getUserLogController = async (req: Request, res: Response) => {
+//   try {
+//     const result = await getUserLogService(req);
+//     res.json({
+//       status: "ok",
+//       message: "success",
+//       ...result,
+//     });
+//   } catch (error) {
+//     logger.error(error);
+//     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+//       status: "error",
+//       message: "Failed to fetch office logs",
+//     });
+//   }
+// };
 
 export const getOneUserController = async (req: Request, res: Response) => {
   try {
@@ -85,8 +81,9 @@ export const getOneUserController = async (req: Request, res: Response) => {
 
 export const createUserController = async (req: Request, res: Response) => {
   try {
-    const changedBy = dataTokenPayload(req, res)?.id;
-    const { firstName, phone, email, password, lastName, role, username, officeId, isActive, userOffice } = req.body;
+    console.log("Creating user with data:", req.body);
+    // const changedBy = dataTokenPayload(req, res)?.id;
+    const { firstName, phone, email, password, lastName, role, username, isActive  } = req.body;
     const isPhoneExists = await isPhoneNumberTaken(phone);
     const hashedPassword = hashPassword(password);
     if (isPhoneExists) {
@@ -97,14 +94,9 @@ export const createUserController = async (req: Request, res: Response) => {
       );
     }
     const transactionResult = await prisma.$transaction(async (tx) => {
-      const newUser = buildNewUser({ firstName, lastName, phone, email, hashedPassword, role, username, officeId, isActive, userOffice });
+      const newUser = buildNewUser({ firstName, lastName, phone, email, hashedPassword, role, username, isActive  });
       const user = await createUserServicer(newUser, tx);
-      await createUserLogService({
-        action: ActionType.CREATE,
-        data: user,
-        changedBy,
-        tx,
-      });
+      
       return user;
     });
     return sendSuccessResponse(res, StatusCodes.CREATED, "ສ້າງບັນຊີສໍາເລັດ", { transactionResult });
@@ -127,7 +119,6 @@ export const updateUserEditAccountController = async (
       const data = await buildUserRecord(req.body);
       const existingUser = await tx.user.findUnique({
         where: { id },
-        include: { userOffice: true },
       });
       if (!existingUser) {
         res.status(StatusCodes.NOT_FOUND).json({
@@ -144,29 +135,7 @@ export const updateUserEditAccountController = async (
         });
         return;
       }
-
-      let updatedUserOffice;
-      if (data.userOffice && data.userOffice.length > 0) {
-        await tx.userOffice.deleteMany({ where: { userId: id } });
-        updatedUserOffice = {
-          create: data.userOffice.reduce((acc: any[], officeId: number) => {
-            acc.push({ office: { connect: { id: officeId } } });
-            return acc;
-          }, []),
-        };
-      }
-      const updateData = {
-        ...data,
-        userOffice: updatedUserOffice ? updatedUserOffice : undefined,
-      };
-      const result = await updateUserAccountService({ data: updateData, id, tx });
-      await createUserLogService({
-        action: ActionType.UPDATE,
-        data: existingUser as Record<string, any>,
-        changes: result as Record<string, any>,
-        changedBy,
-        tx,
-      });
+      const result = await updateUserAccountService({ data: data, id, tx });
       return result;
     });
 
@@ -186,23 +155,23 @@ export const updateUserEditAccountController = async (
   }
 };
 
-export const getAggregationUserController = async (
-  req: Request,
-  res: Response,
-) => {
-  try {
-    const user = await getAggregationUserListServices();
-    res.json({
-      status: "ok",
-      message: "success",
-      ...user,
-    });
-    return;
-  } catch (error) {
-    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-      status: "error",
-      message: "An error occurred while fetching user aggregation.",
-      error: error instanceof Error ? error.message : "Unknown error",
-    });
-  }
-};
+// export const getAggregationUserController = async (
+//   req: Request,
+//   res: Response,
+// ) => {
+//   try {
+//     const user = await getAggregationUserListServices();
+//     res.json({
+//       status: "ok",
+//       message: "success",
+//       ...user,
+//     });
+//     return;
+//   } catch (error) {
+//     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+//       status: "error",
+//       message: "An error occurred while fetching user aggregation.",
+//       error: error instanceof Error ? error.message : "Unknown error",
+//     });
+//   }
+// };

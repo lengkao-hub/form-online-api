@@ -13,7 +13,7 @@ import {
 
 const router = Router();
 
-router.get("/village", authenticate, getAllVillageController);
+router.get("/village", getAllVillageController);
 router.get("/village/:id", authenticate, getOneVillageController);
 router.put("/village/:id", authenticate, ediVillageController);
 router.get("/village-aggregation", authenticate, aggregationController);

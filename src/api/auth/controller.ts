@@ -10,12 +10,13 @@ import { buildPayload, getUserByUsername, validatePassword } from "./lib";
 export const loginController = async (req: Request, res: Response) => {
   try {
     const { username, password } = req.body;
+    console.log("/========================>",req.body);
     const user = await getUserByUsername(username);
     if (!user || !user.isActive) {
       return sendErrorResponse(
         res,
         StatusCodes.NOT_FOUND,
-        "ຊື່ຜູ້ໃຊ້ງາ ຫຼື ລະຫັດຜ່ານບໍ່ຖືກຕ້ອງ",
+        "ຊື່ຜູ້ໃຊ້ງານຜ່ານບໍ່ຖືກຕ້ອງ",
       );
     }
     const isPasswordValid = validatePassword(password, user.password);
@@ -23,7 +24,7 @@ export const loginController = async (req: Request, res: Response) => {
       return sendErrorResponse(
         res,
         StatusCodes.NOT_FOUND,
-        "ຊື່ຜູ້ໃຊ້ງາ ຫຼື ລະຫັດຜ່ານບໍ່ຖືກຕ້ອງ",
+        "ຊື່ຜູ້ໃຊ້ງານ ຫຼື ລະຫັດຜ່ານບໍ່ຖືກຕ້ອງ",
       );
     }
     const payload = buildPayload(user);

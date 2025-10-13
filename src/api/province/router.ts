@@ -13,7 +13,7 @@ import {
 
 const router = Router();
 
-router.get("/province", authenticate, getAllProvinceController);
+router.get("/province", getAllProvinceController);
 router.get("/province/:id", authenticate, getOneProvinceController);
 router.put("/province/:id", authenticate, ediProvinceController);
 router.get("/province-aggregation", authenticate, aggregationController);

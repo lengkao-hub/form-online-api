@@ -62,8 +62,8 @@ export const createVillagesController = async (
   res: Response,
 ) => {
   try {
-    const { villageLao, villageEnglish, districtId, status } = req.body;
-    const newVillage = { villageLao, villageEnglish, districtId, status } as village;
+    const { villageLao, districtId, status } = req.body;
+    const newVillage = { villageLao, districtId, status } as village;
     const createdVillages = await createVillagesService(newVillage);
     res.status(StatusCodes.CREATED).json({
       status: "success",

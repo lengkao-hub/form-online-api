@@ -1,4 +1,4 @@
-import { ActionType, Prisma, user } from "@prisma/client";
+import { Prisma, user } from "@prisma/client";
 import { Request } from "express";
 import { addIndexToResults } from "../../utils/addIndexToResults";
 import {
@@ -22,19 +22,6 @@ export const getAllUserService = async (req: Request) => {
         take,
         orderBy: { id: "desc" },
         where: whereClause,
-        include: {
-          office: true,
-          userOffice: {
-            select: {
-              id: true,
-              office: {
-                select: {
-                  name: true,
-                },
-              },
-            },
-          },
-        },
       });
       const totalCount = await prisma.user.count({ where: whereClause });
       return [data, totalCount];
@@ -68,8 +55,8 @@ export const getUserLogService = async (req: Request) => {
     if (action) {
       where.action = action;
     }
-    const data = await prisma.userLog.findMany({ where, skip, take, orderBy: { id: "desc" } });
-    const totalCount = await prisma.userLog.count({ where });
+    const data = await prisma.user.findMany({ where, skip, take, orderBy: { id: "desc" } });
+    const totalCount = await prisma.user.count({ where });
     return [data, totalCount];
   };
   const paginationResult = await PaginateCalucations({ page, limit, queryFn, paginate });
@@ -84,9 +71,6 @@ export const getOneUserServicer = async ({ id }: { id: number }) => {
   try {
     const user = await prisma.user.findFirst({
       where: { id },
-      include: {
-        userOffice: true,
-      },
     });
     if (!user) {
       throw new Error(`User with id ${id} not found`);
@@ -174,13 +158,6 @@ export const findOneUserServicer = async (username: string) => {
       where: {
         username,
       },
-      include: {
-        userOffice: {
-          select: {
-            officeId: true,
-          },
-        },
-      },
     });
     return result;
   } catch {
@@ -211,33 +188,33 @@ export const getAggregationUserListServices = async () => {
   }
 };
 
-export const createUserLogService = async ({
-  action,
-  data,
-  changes,
-  changedBy,
-  tx,
-}: {
-  action: ActionType;
-  data: Record<string, any>;
-  changes?: Record<string, any>;
-  changedBy: number;
-  tx: Prisma.TransactionClient
-}) => {
-  try {
-    const result = {
-      userId: data.id,
-      action,
-      changedBy,
-      oldEmail: action === ActionType.CREATE ? null : data.email ?? null,
-      newEmail: action === ActionType.CREATE ? data.email ?? null : changes?.email ?? null,
-      oldPhone: action === ActionType.CREATE ? null : data.phone ?? null,
-      newPhone: action === ActionType.CREATE ? data.phone ?? null : changes?.phone ?? null,
-      oldRole: action === ActionType.CREATE ? null : data.role ?? null,
-      newRole: action === ActionType.CREATE ? data.role ?? null : changes?.role ?? null,
-    };
-    return await tx.userLog.create({ data: result });
-  } catch (error) {
-    throw error;
-  }
-};
+// export const createUserLogService = async ({
+//   action,
+//   data,
+//   changes,
+//   changedBy,
+//   tx,
+// }: {
+//   action: ActionType;
+//   data: Record<string, any>;
+//   changes?: Record<string, any>;
+//   changedBy: number;
+//   tx: Prisma.TransactionClient
+// }) => {
+//   try {
+//     const result = {
+//       userId: data.id,
+//       action,
+//       changedBy,
+//       oldEmail: action === ActionType.CREATE ? null : data.email ?? null,
+//       newEmail: action === ActionType.CREATE ? data.email ?? null : changes?.email ?? null,
+//       oldPhone: action === ActionType.CREATE ? null : data.phone ?? null,
+//       newPhone: action === ActionType.CREATE ? data.phone ?? null : changes?.phone ?? null,
+//       oldRole: action === ActionType.CREATE ? null : data.role ?? null,
+//       newRole: action === ActionType.CREATE ? data.role ?? null : changes?.role ?? null,
+//     };
+//     return await tx.userLog.create({ data: result });
+//   } catch (error) {
+//     throw error;
+//   }
+// };

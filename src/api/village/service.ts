@@ -52,7 +52,6 @@ const buildWhereClause = ({
   if (search) {
     whereClause.OR = [
       { villageLao: { contains: search, mode: "insensitive" } },
-      { villageEnglish: { contains: search, mode: "insensitive" } },
     ];
   }
   if (districtId) {
@@ -78,12 +77,11 @@ export const getOneVillageService = async ({ id }: { id: number }) => {
 
 export const createVillagesService = async (villagesData: village) => {
   try {
-    await prisma.village.create({
+    const result = await prisma.village.create({
       data: villagesData,
     });
     return {
-      status: "success",
-      message: "New villages created successfully.",
+      result,
     };
   } catch (error) {
     logger.error(error);

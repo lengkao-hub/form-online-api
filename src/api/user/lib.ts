@@ -5,9 +5,8 @@ import { findOneUserServicer } from "./service";
 import { UserRecord } from "./types";
 
 export const buildUserRecord = async(data: UserRecord) => {
-  const { firstName, lastName, phone, email, password, role, isActive, officeId, username, userOffice } = data;
-  const userRecord: UserRecord = { firstName, lastName, phone, email, role, isActive, username, userOffice,
-    officeId: officeId === 0 ? null : officeId  };
+  const { firstName, lastName, phone, email, password, role, isActive, username } = data;
+  const userRecord: UserRecord = { firstName, lastName, phone, email, role, isActive, username };
   if (password && password.trim() !== "") {
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(password, saltRounds);
@@ -30,9 +29,7 @@ export const buildNewUser = ({
   hashedPassword,
   role,
   username,
-  officeId,
   isActive,
-  userOffice,
 }: any) => ({
   firstName,
   lastName,
@@ -45,14 +42,6 @@ export const buildNewUser = ({
   updatedAt: new Date(),
   createdAt: new Date(),
   deletedAt: null,
-  officeId: officeId ? parseInt(officeId, 10) : null,
-  userOffice: userOffice?.length > 0
-    ? {
-      create: userOffice.map((officeId: number) => ({
-        office: { connect: { id: officeId } },
-      })),
-    }
-    : undefined,
 });
 
 export const isPhoneNumberTaken = async(phone: string): Promise<boolean> => {

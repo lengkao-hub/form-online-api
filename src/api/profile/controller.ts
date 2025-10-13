@@ -1,7 +1,7 @@
 /* eslint-disable no-magic-numbers */
 
 /* eslint-disable max-depth */
-import { ActionType, profile } from "@prisma/client";
+import { profile } from "@prisma/client";
 import { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
 import logger from "../../middleware/logger/config";
@@ -11,14 +11,10 @@ import { dataTokenPayload } from "../../utils/lib";
 import { validatePaginationParams } from "../../utils/pagination";
 import { buildEditProfileRecord, buildProfileRecord, generateBarcode } from "./lib";
 import {
-  aggregationChartProfileServices,
-  aggregationProfileServices,
-  createProfileLogService,
   createProfileService,
   editProfileService,
   getAllProfilesService,
   getOneProfileService,
-  getProfileLogService,
   getProfilesBarcodeService,
 } from "./service";
 
@@ -75,22 +71,22 @@ export const getProfileBarcodeController = async (req: Request, res: Response) =
   }
 };
 
-export const getProfileLogController = async (req: Request, res: Response) => {
-  try {
-    const result = await getProfileLogService(req);
-    res.json({
-      status: "ok",
-      message: "success",
-      ...result,
-    });
-  } catch (error) {
-    logger.error(error);
-    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-      status: "error",
-      message: "Failed to fetch profile logs",
-    });
-  }
-};
+// export const getProfileLogController = async (req: Request, res: Response) => {
+//   try {
+//     const result = await getProfileLogService(req);
+//     res.json({
+//       status: "ok",
+//       message: "success",
+//       ...result,
+//     });
+//   } catch (error) {
+//     logger.error(error);
+//     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+//       status: "error",
+//       message: "Failed to fetch profile logs",
+//     });
+//   }
+// };
 
 export const getOneProfileController = async (req: Request, res: Response) => {
   try {
@@ -109,59 +105,59 @@ export const getOneProfileController = async (req: Request, res: Response) => {
   }
 };
 
-export const getAggregationProfileController = async (
-  req: Request,
-  res: Response,
-) => {
-  try {
-    const { start, end, officeId } = req.query;
-    const aggregationResult = await aggregationProfileServices({
-      start: start as string,
-      end: end as string,
-      officeId: Number(officeId),
-    });
-    res.json({
-      status: "ok",
-      message: "Success",
-      result: aggregationResult,
-    });
-    return;
-  } catch (error) {
-    logger.error(error);
-    res.status(500).json({
-      status: "error",
-      message: "An error occurred while fetching user aggregation.",
-      error: error instanceof Error ? error.message : "Unknown error",
-    });
-    return;
-  }
-};
+// export const getAggregationProfileController = async (
+//   req: Request,
+//   res: Response,
+// ) => {
+//   try {
+//     const { start, end, officeId } = req.query;
+//     const aggregationResult = await aggregationProfileServices({
+//       start: start as string,
+//       end: end as string,
+//       officeId: Number(officeId),
+//     });
+//     res.json({
+//       status: "ok",
+//       message: "Success",
+//       result: aggregationResult,
+//     });
+//     return;
+//   } catch (error) {
+//     logger.error(error);
+//     res.status(500).json({
+//       status: "error",
+//       message: "An error occurred while fetching user aggregation.",
+//       error: error instanceof Error ? error.message : "Unknown error",
+//     });
+//     return;
+//   }
+// };
 
-export const getAggregationChartProfileController = async (
-  req: Request,
-  res: Response,
-) => {
-  try {
-    const { officeId } = req.query;
-    const aggregationResult = await aggregationChartProfileServices({
-      officeId: Number(officeId),
-    });
-    res.json({
-      status: "ok",
-      message: "Success",
-      result: aggregationResult,
-    });
-    return;
-  } catch (error) {
-    logger.error(error);
-    res.status(500).json({
-      status: "error",
-      message: "An error occurred while fetching user aggregation.",
-      error: error instanceof Error ? error.message : "Unknown error",
-    });
-    return;
-  }
-};
+// export const getAggregationChartProfileController = async (
+//   req: Request,
+//   res: Response,
+// ) => {
+//   try {
+//     const { officeId } = req.query;
+//     const aggregationResult = await aggregationChartProfileServices({
+//       officeId: Number(officeId),
+//     });
+//     res.json({
+//       status: "ok",
+//       message: "Success",
+//       result: aggregationResult,
+//     });
+//     return;
+//   } catch (error) {
+//     logger.error(error);
+//     res.status(500).json({
+//       status: "error",
+//       message: "An error occurred while fetching user aggregation.",
+//       error: error instanceof Error ? error.message : "Unknown error",
+//     });
+//     return;
+//   }
+// };
 
 export const createProfileController = async (req: Request, res: Response) => {
   try {
@@ -189,12 +185,12 @@ export const createProfileController = async (req: Request, res: Response) => {
         barcode,
       });
       const createdProfile = await createProfileService(newProfile as any, tx);
-      await createProfileLogService({
-        action: ActionType.CREATE,
-        data: createdProfile,
-        changedBy,
-        tx,
-      });
+      // await createProfileLogService({
+      //   action: ActionType.CREATE,
+      //   data: createdProfile,
+      //   changedBy,
+      //   tx,
+      // });
 
       return createdProfile;
     });
@@ -237,13 +233,13 @@ export const editProfileController = async (req: Request, res: Response) => {
     const transactionResult = await prisma.$transaction(async (tx) => {
       const existingProfile = await tx.profile.findUnique({ where: { id } });
       const editProfile = await editProfileService({ data: updatedRecord as profile, id, tx });
-      await createProfileLogService({
-        action: ActionType.UPDATE,
-        data: existingProfile as Record<string, any>,
-        changes: editProfile,
-        changedBy,
-        tx,
-      });
+      // await createProfileLogService({
+      //   action: ActionType.UPDATE,
+      //   data: existingProfile as Record<string, any>,
+      //   changes: editProfile,
+      //   changedBy,
+      //   tx,
+      // });
       return editProfile;
     });
     res.status(StatusCodes.OK).json({
@@ -280,34 +276,21 @@ export const deleteProfileController = async (req: Request, res: Response) => {
 };
 
 export const checkProfileExistenceController = async (req: Request, res: Response) => {
-  const { identityNumber, identityType, applicationNumber } = req.body;
+  const { identityNumber, identityType } = req.body;
 
   try {
-    const currentYear = new Date().getFullYear();
     const existing = await prisma.profile.findFirst({
       where: {
         identityNumber,
         identityType,
       },
     });
-    let existingApplicationNumber = null;
-    if (applicationNumber) {
-      existingApplicationNumber = await prisma.profile.findFirst({
-        where: {
-          applicationNumber,
-          createdAt: {
-            gte: new Date(`${currentYear}-01-01`),
-            lt: new Date(`${currentYear + 1}-01-01`),
-          },
-        },
-      });
-    }
-    if (existing || existingApplicationNumber) {
-      res.status(400).json({
+    if (existing) {
+      res.json({
         identityType: existing ? "ປະເພດເອກະສານນີ້ມີຢູ່ໃນລະບົບແລ້ວ" : null,
         identityNumber: existing ? "ເລກທີເອກະສານນີ້ມີໃນລະບົບແລ້ວ" : null,
-        applicationNumber: existingApplicationNumber ? "ເລກທີຟອມນີ້ມີຢູ່ໃນລະບົບແລ້ວ" : null,
         identityExists: true,
+        data: existing,
       });
       return;
     }
@@ -323,3 +306,35 @@ export const checkProfileExistenceController = async (req: Request, res: Respons
     return;
   }
 };
+// export const getReportController = async (req: Request, res: Response) => {
+//   try {
+//     const { start, end, officeIds, gender, nationality, filterType } = req.query;
+//     const officeIdsQuery = officeIds
+//       ? (officeIds as string)
+//         .split(",")
+//         .map((id) => Number(id))
+//         .filter((id) => !Number.isNaN(id))
+//       : [];
+//     const aggregationResult = await reportProfileServices({
+//       start: start as string,
+//       end: filterType === "daily" ? undefined : end as string,
+//       gender: gender as string,
+//       nationality: nationality as string,
+//       officeIds: officeIdsQuery,
+//     });
+//     res.json({
+//       status: "ok",
+//       message: "Success",
+//       result: aggregationResult,
+//     });
+//     return;
+//   } catch (error) {
+//     logger.error(error);
+//     res.status(500).json({
+//       status: "error",
+//       message: "An error occurred while fetching user report.",
+//       error: error instanceof Error ? error.message : "Unknown error",
+//     });
+//     return;
+//   }
+// };

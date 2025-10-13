@@ -6,7 +6,7 @@ const baseUserSchema = [
   body("lastName").not().isEmpty().withMessage("ກະລຸນາປ້ອນ ນາມສະກຸນ").isString().withMessage("ກະລຸນາປ້ອນ ນາມສະກຸນ"),
   body("username").not().isEmpty().withMessage("ກະລຸນາປ້ອນ username").isString().withMessage("ກະລຸນາປ້ອນ username"),
   body("phone").not().isEmpty().withMessage("ກະລຸນາປ້ອນ ໝາຍເລກໂທລະສັບ").isLength({ min: 8, max: 8 }).withMessage("ກະລຸນາປ້ອນ ໝາຍເລກໂທລະສັບ 8 ເທົ່ານັ້ນ"),
-  body("role").not().isEmpty().withMessage("ກະລຸນາປ້ອນ ຕຳແໜ່ງ").isIn(["ADMIN", "FINANCE", "POLICE_OFFICER", "POLICE_COMMANDER", "POLICE_PRODUCTION", "VERSIFICATION_OFFICER"]).withMessage("ກະລຸນາປ້ອນ ຕຳແໜ່ງ ທີ່ຖືກຕ້ອງ"),
+  body("role").not().isEmpty().withMessage("ກະລຸນາປ້ອນ ຕຳແໜ່ງ").isIn(["ADMIN", "FINANCE", "POLICE_OFFICER", "POLICE_COMMANDER", "POLICE_PRODUCTION", "VERSIFICATION_OFFICER", "POLICE_COMMANDER_PROVINCE","USER"]).withMessage("ກະລຸນາປ້ອນ ຕຳແໜ່ງ ທີ່ຖືກຕ້ອງ"),
   body("email").not().isEmpty().withMessage("ກະລຸນາປ້ອນ ອີເມວ").isEmail().withMessage("ກະລຸນາປ້ອນ ອີເມວທີ່ຖືກຕ້ອງ"),
   body("officeId").optional().isInt().withMessage("ກະລຸນາປ້ອນ ລະຫັດສາຂາ (ຖ້າມີ)"),
   body("isActive").optional().isBoolean().withMessage("ກະລຸນາປ້ອນ ສະຖານະ"),

@@ -13,7 +13,7 @@ import {
 
 const router = Router();
 
-router.get("/district", authenticate, getAllDistrictController);
+router.get("/district", getAllDistrictController);
 router.get("/district/:id", authenticate, getOneDistrictController);
 router.put("/district/:id", authenticate, ediDistrictController);
 router.get("/district-aggregation", authenticate, aggregationController);

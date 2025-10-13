@@ -1,7 +1,7 @@
 /* eslint-disable no-magic-numbers */
 import { Prisma } from "@prisma/client";
+import { endOfDay, startOfDay } from "date-fns";
 import { dateTimeFormat } from "../../utils/dateFormat";
-import { startOfDay, endOfDay } from "date-fns";
 
 export function buildProfileRecord({
   profile,
@@ -19,11 +19,10 @@ export function buildProfileRecord({
   const result = {
     image: imagePath,
     oldImage: oldImage || null,
-    applicationNumber: profile.applicationNumber || null,
     firstName: profile.firstName,
     barcode: parseInt(barcode!, 10),
     lastName: profile.lastName,
-    phoneNumber: profile.phoneNumber,
+    phoneNumber: profile.phoneNumber || null,
     dateOfBirth: profile.dateOfBirth,
     gender: profile.gender,
     nationalityId: parseInt(profile.nationalityId, 10),
@@ -32,11 +31,11 @@ export function buildProfileRecord({
     identityNumber: profile.identityNumber,
     identityIssueDate: profile.identityIssueDate,
     identityExpiryDate: profile.identityExpiryDate,
-    currentProvince: parseInt(profile.currentProvince, 10),
-    currentDistrict: parseInt(profile.currentDistrict, 10),
-    currentVillageId: parseInt(profile.currentVillageId, 10),
-    overseasCountryId: parseInt(profile.overseasCountryId, 10),
-    overseasProvince: profile.overseasProvince,
+    currentProvince: parseInt(profile.currentProvince, 10) || null,
+    currentDistrict: parseInt(profile.currentDistrict, 10) || null,
+    currentVillageId: parseInt(profile.currentVillageId, 10) || null,
+    overseasCountryId: parseInt(profile.overseasCountryId, 10) || null,
+    overseasProvince: profile.overseasProvince || null,
     officeId: parseInt(officeId, 10),
     updatedAt: new Date(),
   };
@@ -104,7 +103,6 @@ export function buildEditProfileRecord({
   const newRecord = {
     image: imagePath,
     oldImage: oldImage || null,
-    applicationNumber: profile.applicationNumber,
     firstName: profile.firstName,
     lastName: profile.lastName,
     phoneNumber: profile.phoneNumber,
@@ -116,10 +114,10 @@ export function buildEditProfileRecord({
     identityNumber: profile.identityNumber,
     identityIssueDate: parseDate(profile.identityIssueDate),
     identityExpiryDate: parseDate(profile.identityExpiryDate),
-    currentProvince: parseInt(profile.currentProvince, 10),
-    currentDistrict: parseInt(profile.currentDistrict, 10),
-    currentVillageId: parseInt(profile.currentVillageId, 10),
-    overseasCountryId: parseInt(profile.overseasCountryId, 10),
+    currentProvince: parseInt(profile.currentProvince, 10) || null,
+    currentDistrict: parseInt(profile.currentDistrict, 10) || null,
+    currentVillageId: parseInt(profile.currentVillageId, 10) || null,
+    overseasCountryId: parseInt(profile.overseasCountryId, 10) || null,
     overseasProvince: profile.overseasProvince,
     updatedAt: new Date(),
     deletedAt: null,
@@ -210,9 +208,6 @@ export const buildWhereClause = ({
   barcode?: number
 }): Prisma.profileWhereInput => {
   const whereClause: Prisma.profileWhereInput = {
-    blacklist: {
-      none: {},
-    },
   };
 
   if (search) {
@@ -220,7 +215,6 @@ export const buildWhereClause = ({
       { firstName: { contains: search, mode: "insensitive" } },
       { lastName: { contains: search, mode: "insensitive" } },
       { phoneNumber: { contains: search, mode: "insensitive" } },
-      { applicationNumber: { contains: search, mode: "insensitive" } },
       { barcode: { equals: Number(search) || undefined } },
       { identityNumber: { contains: search, mode: "insensitive" } },
     ];
@@ -250,9 +244,46 @@ export const buildWhereClause = ({
   if (barcode) {
     whereClause.barcode = barcode;
   }
-  if (excludeApplications) {
-    whereClause.application = {
-      none: {},
+
+  return whereClause;
+};
+
+export const buildReportWhereClause = ({
+  start,
+  end,
+  gender,
+  nationality,
+  officeIds,
+}: {
+  start: string;
+  end?: string;
+  gender?: string;
+  nationality?: string;
+  visaType?: string;
+  cardType?: string;
+  officeIds?: number[];
+}): Prisma.profileWhereInput => {
+  const whereClause: Prisma.profileWhereInput = {
+  };
+
+  if (officeIds && officeIds.length > 0) {
+    whereClause.officeId = { in: officeIds };
+  }
+  if (gender && gender !== "all") {
+    whereClause.gender = { equals: gender, mode: "insensitive" };
+  }
+  if (nationality  && nationality !== "1") {
+    whereClause.nationalityId = { equals: Number(nationality) };
+  }
+  if (start && !end) {
+    whereClause.createdAt = {
+      gte: startOfDay(new Date(start)),
+      lte: endOfDay(new Date(start)),
+    };
+  } else if (start && end) {
+    whereClause.createdAt = {
+      gte: startOfDay(new Date(start)),
+      lte: endOfDay(new Date(end)),
     };
   }
 
