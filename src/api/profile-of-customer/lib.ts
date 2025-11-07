@@ -1,26 +1,22 @@
 /* eslint-disable no-magic-numbers */
-import { Prisma } from "@prisma/client";
+import { FolderRejectStatus, Prisma } from "@prisma/client";
 import { endOfDay, startOfDay } from "date-fns";
 import { dateTimeFormat } from "../../utils/dateFormat";
 
 export function buildProfileRecord({
   profile,
-  companyId,
-  barcode,
-  oldImage,
+  officeId,
   imagePath,
 }: {
   profile: any;
   imagePath: any;
-  companyId: number;
+  officeId: any;
   barcode: string;
   oldImage?: any;
 }) {
   const result = {
     image: imagePath,
-    oldImage: oldImage || null,
     firstName: profile.firstName,
-    barcode: parseInt(barcode!, 10),
     lastName: profile.lastName,
     phoneNumber: profile.phoneNumber || null,
     dateOfBirth: profile.dateOfBirth,
@@ -36,7 +32,7 @@ export function buildProfileRecord({
     currentVillageId: parseInt(profile.currentVillageId, 10) || null,
     overseasCountryId: parseInt(profile.overseasCountryId, 10) || null,
     overseasProvince: profile.overseasProvince || null,
-    companyId: companyId,
+    officeId: parseInt(officeId, 10),
     updatedAt: new Date(),
   };
   return result;
@@ -192,20 +188,18 @@ export const buildWhereClause = ({
   gender,
   year,
   date,
-  companyId,
+  status,
 }: {
   search?: string;
   gender?: string;
   year?: string,
   date?: Date;
   deletedAt?: string;
-  companyId?: number;
+  status?: string,
 }): Prisma.profileWhereInput => {
   const whereClause: Prisma.profileWhereInput = {
   };
-  whereClause.status = {
-    in: ["APPROVED"],
-  };
+
   if (search) {
     whereClause.OR = [
       { firstName: { contains: search, mode: "insensitive" } },
@@ -215,6 +209,7 @@ export const buildWhereClause = ({
       { identityNumber: { contains: search, mode: "insensitive" } },
     ];
   }
+
   if (gender) {
     whereClause.gender = { equals: gender, mode: "insensitive" };
   }
@@ -231,8 +226,8 @@ export const buildWhereClause = ({
       lt: startOfNextYear,
     };
   }
-  if (companyId) {
-    whereClause.companyId = companyId;
+  if (status) {
+    whereClause.status = status as FolderRejectStatus;
   }
 
   return whereClause;
@@ -254,6 +249,7 @@ export const buildReportWhereClause = ({
 }): Prisma.profileWhereInput => {
   const whereClause: Prisma.profileWhereInput = {
   };
+
   if (gender && gender !== "all") {
     whereClause.gender = { equals: gender, mode: "insensitive" };
   }

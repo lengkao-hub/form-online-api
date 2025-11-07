@@ -17,30 +17,47 @@ datasource db {
 }
 
 model user {
-  id              Int               @id @default(autoincrement())
-  firstName       String
-  lastName        String
-  email           String            @unique
-  phone           String            @unique
-  password        String
-  role            Role              @default(ADMIN)
-  isActive        Boolean           @default(true)
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
-  deletedAt       DateTime?         @db.Timestamp(6)
-  username        String?           @unique  
+  id        Int       @id @default(autoincrement())
+  firstName String
+  lastName  String
+  email     String    @unique
+  phone     String    @unique
+  password  String
+  role      Role      @default(ADMIN)
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime? @db.Timestamp(6)
+  username  String?   @unique
+  companyId Int?
+  folder    folder[]
+  profile   profile[]
 
   @@index([email])
   @@index([createdAt])
   @@index([updatedAt])
 }
+
+model folder {
+  id        Int       @id @default(autoincrement())
+  userId    Int
+  companyId Int?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  user      user      @relation(fields: [userId], references: [id])
+  profile   profile[]
+
+  @@index([createdAt])
+  @@index([updatedAt])
+}
+
 model profile {
-  id                 Int              @id @default(autoincrement())
+  id                 Int                @id @default(autoincrement())
   barcode            BigInt?
   firstName          String
   lastName           String
   phoneNumber        String?
-  dateOfBirth        DateTime
+  dateOfBirth        DateTime?
   gender             String
   nationalityId      Int
   ethnicityId        Int
@@ -50,62 +67,29 @@ model profile {
   identityExpiryDate DateTime?
   currentProvince    Int?
   currentDistrict    Int?
+  currentVillageId   Int?
   overseasCountryId  Int?
   overseasProvince   String?
-  createdAt          DateTime         @default(now())
-  updatedAt          DateTime         @updatedAt
-  deletedAt          DateTime?        @db.Timestamp(6)
-  officeId           Int?
-  currentVillageId   Int?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  deletedAt          DateTime?          @db.Timestamp(6)
   image              String?
   oldImage           String?
-  district           district?        @relation(fields: [currentDistrict], references: [id], onDelete: Restrict)
-  province           province?        @relation(fields: [currentProvince], references: [id], onDelete: Restrict)
-  currentVillage     village?  @relation(fields: [currentVillageId], references: [id], onDelete: Restrict)
- 
+  userId             Int?
+  status             FolderRejectStatus @default(PENDING)
+  folderId           Int?
+  companyId          Int?
+  folder             folder?            @relation(fields: [folderId], references: [id])
+  user               user?              @relation(fields: [userId], references: [id])
+
   @@index([nationalityId])
   @@index([ethnicityId])
   @@index([currentProvince])
   @@index([currentDistrict])
-  @@index([officeId])
   @@index([createdAt])
   @@index([updatedAt])
 }
-model province {
-  id              Int        @id
-  provinceLao     String
-  provinceEnglish String
-  status          Boolean    @default(true)
-  district        district[]
-  profile         profile[]
 
-  @@index([provinceLao])
-  @@index([provinceEnglish])
-}
-
-model district {
-  id              Int       @id @default(autoincrement())
-  districtLao     String
-  districtEnglish String
-  provinceId      Int
-  status          Boolean   @default(true)
-  province        province  @relation(fields: [provinceId], references: [id])
-  profile         profile[]
-  village         village[]
-
-  @@index([provinceId])
-  @@index([districtLao])
-  @@index([districtEnglish])
-}
-
-model village {
-  id          Int           @id @default(autoincrement())
-  villageLao  String
-  districtId  Int
-  status      Boolean       @default(true)
-  profile     profile[]
-  district    district      @relation(fields: [districtId], references: [id])
-}
 enum folderType {
   YELLOW
   BLUE

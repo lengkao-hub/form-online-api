@@ -18,7 +18,6 @@ router.get("/user", authenticate, getManyUserController);
 router.get("/user/:id", authenticate, getOneUserController);
 router.put("/user/:id", authenticate, valResult, updateUserEditAccountController);
 // router.get("/user-aggregation", authenticate, getAggregationUserController);
-
 router.post("/register", userSchemaCreate, valResult, createUserController);
 
 export default router;

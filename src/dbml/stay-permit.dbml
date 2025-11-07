@@ -20,6 +20,19 @@ Table user {
   updatedAt DateTime [not null]
   deletedAt DateTime
   username String [unique]
+  companyId Int
+  folder folder [not null]
+  profile profile [not null]
+}
+
+Table folder {
+  id Int [pk, increment]
+  userId Int [not null]
+  companyId Int
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  user user [not null]
+  profile profile [not null]
 }
 
 Table profile {
@@ -28,7 +41,7 @@ Table profile {
   firstName String [not null]
   lastName String [not null]
   phoneNumber String
-  dateOfBirth DateTime [not null]
+  dateOfBirth DateTime
   gender String [not null]
   nationalityId Int [not null]
   ethnicityId Int [not null]
@@ -38,47 +51,20 @@ Table profile {
   identityExpiryDate DateTime
   currentProvince Int
   currentDistrict Int
+  currentVillageId Int
   overseasCountryId Int
   overseasProvince String
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
   deletedAt DateTime
-  officeId Int
-  currentVillageId Int
   image String
   oldImage String
-  district district
-  province province
-  currentVillage village
-}
-
-Table province {
-  id Int [pk]
-  provinceLao String [not null]
-  provinceEnglish String [not null]
-  status Boolean [not null, default: true]
-  district district [not null]
-  profile profile [not null]
-}
-
-Table district {
-  id Int [pk, increment]
-  districtLao String [not null]
-  districtEnglish String [not null]
-  provinceId Int [not null]
-  status Boolean [not null, default: true]
-  province province [not null]
-  profile profile [not null]
-  village village [not null]
-}
-
-Table village {
-  id Int [pk, increment]
-  villageLao String [not null]
-  districtId Int [not null]
-  status Boolean [not null, default: true]
-  profile profile [not null]
-  district district [not null]
+  userId Int
+  status FolderRejectStatus [not null, default: 'PENDING']
+  folderId Int
+  companyId Int
+  folder folder
+  user user
 }
 
 Enum folderType {
@@ -152,12 +138,8 @@ Enum applicationDependBy {
   VILLAGE
 }
 
-Ref: profile.currentDistrict > district.id [delete: Restrict]
+Ref: folder.userId > user.id
 
-Ref: profile.currentProvince > province.id [delete: Restrict]
+Ref: profile.folderId > folder.id
 
-Ref: profile.currentVillageId > village.id [delete: Restrict]
-
-Ref: district.provinceId > province.id
-
-Ref: village.districtId > district.id
+Ref: profile.userId > user.id

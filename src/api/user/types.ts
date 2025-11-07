@@ -7,12 +7,8 @@ export interface TokenPayload {
   firstName: string;
   lastName: string;
   username?: string;
-  officeId?: number | null;
-  userOffice?: Array<{
-    id: number, office: {
-      name: string;
-    }
-  }>;
+  companyId?: number | null;
+
 }
 
 export enum Roles {

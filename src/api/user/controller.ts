@@ -1,4 +1,4 @@
- 
+
 import { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
 
@@ -23,7 +23,8 @@ import {
 
 export const getManyUserController = async (req: Request, res: Response) => {
   try {
-    const result = await getAllUserService(req);
+    const companyId = dataTokenPayload(req, res)?.companyId;
+    const result = await getAllUserService(req, companyId);
     res.json({
       status: "ok",
       message: "success",
@@ -81,9 +82,8 @@ export const getOneUserController = async (req: Request, res: Response) => {
 
 export const createUserController = async (req: Request, res: Response) => {
   try {
-    console.log("Creating user with data:", req.body);
-    // const changedBy = dataTokenPayload(req, res)?.id;
-    const { firstName, phone, email, password, lastName, role, username, isActive  } = req.body;
+    const companyId = dataTokenPayload(req, res)?.companyId;
+    const { firstName, phone, email, password, lastName, role, username, isActive } = req.body;
     const isPhoneExists = await isPhoneNumberTaken(phone);
     const hashedPassword = hashPassword(password);
     if (isPhoneExists) {
@@ -94,9 +94,9 @@ export const createUserController = async (req: Request, res: Response) => {
       );
     }
     const transactionResult = await prisma.$transaction(async (tx) => {
-      const newUser = buildNewUser({ firstName, lastName, phone, email, hashedPassword, role, username, isActive  });
+      const newUser = buildNewUser({ firstName, lastName, phone, email, hashedPassword, role, username, isActive }, companyId);
       const user = await createUserServicer(newUser, tx);
-      
+
       return user;
     });
     return sendSuccessResponse(res, StatusCodes.CREATED, "ສ້າງບັນຊີສໍາເລັດ", { transactionResult });
@@ -114,7 +114,6 @@ export const updateUserEditAccountController = async (
 ) => {
   const id = Number(req.params.id);
   try {
-    const changedBy = dataTokenPayload(req, res)?.id;
     const transactionResult = await prisma.$transaction(async (tx) => {
       const data = await buildUserRecord(req.body);
       const existingUser = await tx.user.findUnique({

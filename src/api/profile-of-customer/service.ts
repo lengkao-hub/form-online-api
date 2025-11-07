@@ -6,7 +6,7 @@ import { Request } from "express";
 import logger from "../../middleware/logger/config";
 import { prisma } from "../../prisma/index";
 import { addIndexToResults } from "../../utils/addIndexToResults";
-import { resolveImageUrls } from "../../utils/fileUrl";
+import { getImagePath, resolveImageUrls } from "../../utils/fileUrl";
 import { PaginateCalucations } from "../../utils/pagination";
 import {
   buildWhereClause,
@@ -21,26 +21,77 @@ export const getAllProfilesService = async ({
   gender,
   year,
   date,
-  companyId,
   req,
-}: IGetAllProfilesServiceProps & { excludeApplications?: boolean, barcode?: number, req: Request, officeIds?: string, companyId?: number }) => {
+  userId,
+}: IGetAllProfilesServiceProps & { req: Request, userId: number }) => {
   try {
     const whereClause = buildWhereClause({
       search,
       gender,
       year,
       date,
-      companyId,
     });
     const queryFn = async (skip: number, take: number) => {
       const data = await prisma.profile.findMany({
         skip,
         take,
-        where: whereClause,
+        where: {
+          ...whereClause,
+          userId: userId,
+        },
         orderBy: { createdAt: "desc" },
       });
       const totalCount = await prisma.profile.count({
-        where: whereClause,
+        where: { userId: userId },
+      });
+      return [data, totalCount];
+    };
+    const paginationResult = await PaginateCalucations({ page, limit, queryFn, paginate });
+    const dataWithIndex = addIndexToResults(paginationResult.result, page, limit);
+    const result = resolveImageUrls({ records: dataWithIndex, fields: ["image", "oldImage"], request: req, nestedKey: "profileGallery", nestedImageField: "gallery.image" });
+    const formattedDate = formatDate(result);
+    return {
+      ...paginationResult,
+      result: formattedDate,
+    };
+  } catch (error) {
+    logger.error(error);
+  } finally {
+    await prisma.$disconnect();
+  }
+};
+export const getAllApprovedService = async ({
+  page,
+  limit,
+  paginate,
+  search,
+  gender,
+  year,
+  date,
+  status,
+  req,
+  userId,
+}: IGetAllProfilesServiceProps & { req: Request, userId: number }) => {
+  try {
+    const whereClause = buildWhereClause({
+      search,
+      gender,
+      year,
+      date,
+      status,
+    });
+    const queryFn = async (skip: number, take: number) => {
+      const data = await prisma.profile.findMany({
+        skip,
+        take,
+        where: {
+          ...whereClause,
+          userId: userId,
+        },
+        orderBy: { createdAt: "desc" },
+      });
+      const totalCount = await prisma.profile.count({
+        where: { userId: userId, status: status },
       });
       return [data, totalCount];
     };
@@ -84,39 +135,24 @@ export const getAllProfilesService = async ({
 //   };
 // };
 
-interface IGetOneProfileProp {
-  id: number,
-  page: number,
-  limit: number,
-  paginate: boolean
-}
-export const getOneProfileService = async ({ id, page, limit, paginate, req }: IGetOneProfileProp & { req: Request }) => {
+export const getOneProfileService = async ({ id, req }: { id: number | string, req: Request }) => {
   try {
     const profileId = Number(id);
     if (isNaN(profileId)) {
       throw new Error("Invalid profile ID: ID must be a number.");
     }
-    const queryFn = async (skip: number, take: number) => {
-      const data = await prisma.profile.findMany({
-        skip,
-        take,
-        where:
-        {
-          folderId: profileId,
-        },
-        orderBy: { createdAt: "desc" },
-      });
-      const totalCount = await prisma.profile.count({ where: { folderId: profileId } });
-      return [data, totalCount];
-    };
-    const paginationResult = await PaginateCalucations({ page, limit, queryFn, paginate });
-    const dataWithIndex = addIndexToResults(paginationResult.result, page, limit);
-    const result = resolveImageUrls({ records: dataWithIndex, fields: ["image", "oldImage"], request: req, nestedKey: "profileGallery", nestedImageField: "gallery.image" });
-    const formattedDate = formatDate(result);
-    return {
-      ...paginationResult,
-      result: formattedDate,
-    };
+    const data = await prisma.profile.findUnique({
+      where: { id: profileId },
+      include: {
+      },
+    });
+    if (!data) {
+      throw new Error(`Profile with ID ${profileId} not found.`);
+    }
+    const dataWithImagePath = getImagePath({ req, data, field: "image" });
+    const dataWithOldImagePath = getImagePath({ req, data: dataWithImagePath, field: "oldImage" });
+    const result = resolveImageUrls({ records: dataWithOldImagePath, fields: ["gallery.image"], request: req, nestedKey: "profileGallery", nestedImageField: "gallery.image" });
+    return { result };
   } catch (error) {
     logger.error("Error in getOneProfileService:", error);
     throw error;
@@ -328,19 +364,22 @@ export const getOneProfileService = async ({ id, page, limit, paginate, req }: I
 // };
 
 export const createProfileService = async (
-  profileData: Omit<profile, "id">,
+  dataToSave: any[],
   tx: Prisma.TransactionClient,
 ) => {
   try {
-    const createdProfile = await tx.profile.create({
-      data: profileData,
+    const createdProfile = await tx.profile.createMany({
+      data: dataToSave,
+      skipDuplicates: true, // ປ້ອງກັນຊ້ຳ
     });
+
     return createdProfile;
   } catch (error) {
     logger.error(error);
     throw new Error("Failed to create profile data");
   }
 };
+
 export const editProfileService = async ({
   data,
   id,
@@ -361,6 +400,17 @@ export const editProfileService = async ({
     throw new Error("Failed to editing profile data");
   }
 };
+// export const deleteProfileService = async (id: number, tx: Prisma.TransactionClient) => {
+//   const data = await tx.user.findMany({
+//     where: { profileId: { not: null } },
+//     include: {
+//       profile: {
+//         where: { id },
+//       }
+//     },
+//   });
+
+// }
 
 // export const createProfileLogService = async ({
 //   action,

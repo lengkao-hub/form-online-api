@@ -18,8 +18,7 @@ export const buildPayload = (user: any) => ({
   role: user.role,
   firstName: user.firstName,
   email: user.email,
-  officeId: user.officeId,
+  companyId: user.companyId,
   lastName: user.lastName,
   username: user.username,
-  userOffice: user.userOffice ?? [],
 });

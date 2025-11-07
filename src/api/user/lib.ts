@@ -4,7 +4,7 @@ import bcrypt from "bcrypt";
 import { findOneUserServicer } from "./service";
 import { UserRecord } from "./types";
 
-export const buildUserRecord = async(data: UserRecord) => {
+export const buildUserRecord = async (data: UserRecord) => {
   const { firstName, lastName, phone, email, password, role, isActive, username } = data;
   const userRecord: UserRecord = { firstName, lastName, phone, email, role, isActive, username };
   if (password && password.trim() !== "") {
@@ -30,12 +30,13 @@ export const buildNewUser = ({
   role,
   username,
   isActive,
-}: any) => ({
+}: any, companyId: number) => ({
   firstName,
   lastName,
   phone,
   username,
   email,
+  companyId,
   password: hashedPassword,
   role: role || Role.ADMIN,
   isActive: isActive ?? true,
@@ -44,7 +45,7 @@ export const buildNewUser = ({
   deletedAt: null,
 });
 
-export const isPhoneNumberTaken = async(phone: string): Promise<boolean> => {
+export const isPhoneNumberTaken = async (phone: string): Promise<boolean> => {
   const user = await findOneUserServicer(phone);
   return !!user;
 };
@@ -63,8 +64,10 @@ export const buildPayload = (user: any) => ({
 
 export const buildWhereClause = ({
   search,
+  companyId,
 }: {
   search?: any;
+  companyId?: number;
 }): Prisma.userWhereInput => {
   const whereClause: Prisma.userWhereInput = {};
   if (search) {
@@ -74,6 +77,9 @@ export const buildWhereClause = ({
       { email: { contains: search, mode: "insensitive" } },
       { phone: { contains: search, mode: "insensitive" } },
     ];
+  }
+  if (companyId) {
+    whereClause.companyId = companyId;
   }
   return whereClause;
 };

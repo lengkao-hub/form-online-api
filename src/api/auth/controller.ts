@@ -10,7 +10,6 @@ import { buildPayload, getUserByUsername, validatePassword } from "./lib";
 export const loginController = async (req: Request, res: Response) => {
   try {
     const { username, password } = req.body;
-    console.log("/========================>",req.body);
     const user = await getUserByUsername(username);
     if (!user || !user.isActive) {
       return sendErrorResponse(

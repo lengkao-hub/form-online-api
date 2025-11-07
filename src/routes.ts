@@ -1,11 +1,10 @@
 import Router from "express";
- 
+
 import authRouter from "./api/auth/router";
-import districtRouter from "./api/district/router";
+import folderRouter from "./api/folder/router";
+import ProfileOfCustomer from "./api/profile-of-customer/router";
 import profileRouter from "./api/profile/router";
-import provinceRouter from "./api/province/router";
 import userRouter from "./api/user/router";
-import villageRouter from "./api/village/router";
 
 import {
   createLoginSwaggerController,
@@ -13,13 +12,12 @@ import {
 } from "./swaggers/controller";
 
 const router = Router();
- 
-router.use(districtRouter); 
+
 router.use(profileRouter);
-router.use(provinceRouter);
+router.use(ProfileOfCustomer);
 router.use(userRouter);
-router.use(authRouter); 
-router.use(villageRouter); 
+router.use(authRouter);
+router.use(folderRouter);
 
 router.get("/swagger-login", createLoginSwaggerController);
 router.post("/swagger-login", swaggerLoginController);

@@ -10,12 +10,12 @@ import logger from "../../middleware/logger/config";
 import { prisma } from "../../prisma";
 import { buildWhereClause } from "./lib";
 
-export const getAllUserService = async (req: Request) => {
+export const getAllUserService = async (req: Request, companyId: number) => {
   try {
     const { search = "" } = req.query;
     const paginationParams = validatePaginationParams(req);
     const { page, limit, paginate } = paginationParams;
-    const whereClause = buildWhereClause({ search });
+    const whereClause = buildWhereClause({ search, companyId });
     const queryFn = async (skip: number, take: number) => {
       const data = await prisma.user.findMany({
         skip,
