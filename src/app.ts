@@ -11,11 +11,11 @@ import env from "./utils/env";
 import { configureSwagger } from "./swaggers/swagger-config";
 import { helpCheck } from "./utils/helpCheck";
 
+import path from "path";
 import { logRequestResponse } from "./middleware/logger/logger-middleware";
 import { swaggerRedirectController } from "./swaggers/controller";
 import { swaggerVerify } from "./swaggers/jwt";
 import { speedLimiter, strictLimiter } from "./utils/limiter";
-
 const app = express();
 
 const register = new prom.Registry();
@@ -42,7 +42,7 @@ app.use((req: Request, res: Response, next: NextFunction) =>
 );
 
 app.get("/", helpCheck);
-
+app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 app.use("/login", strictLimiter, router);
 app.use(speedLimiter, router);
 app.use(express.static(join(env.PWD, "uploads")));

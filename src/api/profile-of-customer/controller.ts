@@ -9,7 +9,7 @@ import { prisma } from "../../prisma/index";
 import { processFileUrl } from "../../utils/fileUrl";
 import { dataTokenPayload } from "../../utils/lib";
 import { validatePaginationParams } from "../../utils/pagination";
-import { buildEditProfileRecord, generateBarcode } from "./lib";
+import { buildEditProfileRecord } from "./lib";
 import {
   createProfileService,
   editProfileService,
@@ -110,18 +110,42 @@ export const createProfileController = async (req: Request, res: Response) => {
     const userId = Number(tokenData?.id);
     const companyId = Number(tokenData?.companyId);
 
-    let barcode: string;
-    let isUnique = false;
-    while (!isUnique) {
-      barcode = generateBarcode();
-      const existingProfile = await prisma.profile.findFirst({
-        where: { barcode: parseInt(barcode, 10) },
-      });
-      if (!existingProfile) {
-        isUnique = true;
+    // ✅ ເມື່ອໃຊ້ .any() → req.files ເປັນ Array
+    const uploadedFiles = req.files as Express.Multer.File[];
+    // Parse customers
+    let parsedArray: any[] = [];
+    const rawBody = req.body;
+
+    if (rawBody.customers && typeof rawBody.customers === "string") {
+      try {
+        parsedArray = JSON.parse(rawBody.customers);
+      } catch {
+        throw new Error("Invalid JSON format in customers field");
       }
+    } else if (Array.isArray(rawBody.customers)) {
+      parsedArray = rawBody.customers;
+    } else if (Array.isArray(rawBody)) {
+      parsedArray = rawBody;
+    } else {
+      parsedArray = [rawBody];
     }
 
+    if (!parsedArray || parsedArray.length === 0) {
+      throw new Error("No customer data provided");
+    }
+    // ✅ ສ້າງ key ຂອງຮູບ ແລະ ທີ່ ຢູ່ຂອງຮູບ
+    const fileMap: { [fieldname: string]: string } = {};
+    if (uploadedFiles && Array.isArray(uploadedFiles)) {
+      uploadedFiles.forEach((file) => {
+        fileMap[file.fieldname] = `/uploads/profile/${file.filename}`;
+      });
+    }
+
+    const imageFiles: (string | null)[] = parsedArray.map((_, index) => {
+      // fieldName ມັນຈະສ້າງຊື່ key ຂອງຂໍ້ມູນ
+      const fieldName = `image_${index}`;
+      return fileMap[fieldName] || null;
+    });
     const transactionResult = await prisma.$transaction(async (tx) => {
       const folder = await tx.folder.create({
         data: { userId, companyId },
@@ -130,65 +154,54 @@ export const createProfileController = async (req: Request, res: Response) => {
       if (!folder) {
         throw new Error("Failed to create folder");
       }
-      const rawBody = req.body;
-      let parsedArray: any[] = [];
 
-      if (!Array.isArray(rawBody) && typeof rawBody === "object") {
-        const keys = Object.keys(rawBody);
-        const parseValue = (value: string) => {
-          try {
-            return JSON.parse(value);
-          } catch {
-            return {};
-          }
-        };
-
-        parsedArray = keys.map((key) => parseValue(rawBody[key]));
-      } else if (Array.isArray(rawBody)) {
-        parsedArray = rawBody;
-      } else {
-        parsedArray = [rawBody];
-      }
-      const dataToSave = parsedArray.map((item: any) => ({
-        firstName: item.firstName ?? null,
-        lastName: item.lastName ?? null,
-        phoneNumber: item.phoneNumber ?? null,
-        dateOfBirth: item.dateOfBirth ?? null,
-        gender: item.gender ?? null,
-        nationalityId: item.nationalityId ?? null,
-        ethnicityId: item.ethnicityId ?? null,
-        identityType: item.identityType ?? null,
-        identityIssueDate: item.identityIssueDate ?? null,
-        identityNumber: item.identityNumber ?? null,
-        identityExpiryDate: item.identityExpiryDate ?? null,
-        currentProvince: item.currentProvince ?? null,
-        currentDistrict: item.currentDistrict ?? null,
-        currentVillageId: item.currentVillageId ?? null,
-        overseasCountryId: item.overseasCountryId ?? null,
-        overseasProvince: item.overseasProvince ?? null,
-        folderId: folder.id,
-        companyId,
-        userId,
-      }));
-      for (const d of dataToSave) {
-        if (!d.firstName || !d.lastName) {
-          throw new Error("firstName and lastName are required fields");
+      // ແຍກ transform function ອອກມາ
+      const transformCustomerData = (item: any, index: number) => {
+        if (!item.firstName || !item.lastName) {
+          throw new Error(`firstName and lastName are required for customer at index ${index}`);
         }
-      }
+
+        return {
+          firstName: item.firstName,
+          lastName: item.lastName,
+          phoneNumber: item.phoneNumber || null,
+          dateOfBirth: item.dateOfBirth ? new Date(item.dateOfBirth) : null,
+          gender: item.gender || null,
+          nationalityId: item.nationalityId ? Number(item.nationalityId) : null,
+          ethnicityId: item.ethnicityId ? Number(item.ethnicityId) : null,
+          identityType: item.identityType || null,
+          identityIssueDate: item.identityIssueDate ? new Date(item.identityIssueDate) : null,
+          identityNumber: item.identityNumber || null,
+          identityExpiryDate: item.identityExpiryDate ? new Date(item.identityExpiryDate) : null,
+          currentProvince: item.currentProvince ? Number(item.currentProvince) : null,
+          currentDistrict: item.currentDistrict ? Number(item.currentDistrict) : null,
+          currentVillageId: item.currentVillageId ? Number(item.currentVillageId) : null,
+          overseasCountryId: item.overseasCountryId ? Number(item.overseasCountryId) : null,
+          overseasProvince: item.overseasProvince || null,
+          folderId: folder.id,
+          image: imageFiles[index],
+          companyId,
+          userId,
+        };
+      };
+
+      // ແລ້ວໃຊ້ແບບນີ້
+      const dataToSave = parsedArray.map(transformCustomerData);
+
       const createdProfile = await createProfileService(dataToSave, tx);
       return createdProfile;
     });
+
     res.status(StatusCodes.CREATED).json({
       status: "success",
       message: "Profile created successfully",
       result: transactionResult,
     });
-  } catch (error) {
+  } catch (error: any) {
     logger.error("Error creating profile", error);
-
     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
       status: "error",
-      message: "Failed to create profile data",
+      message: error.message || "Failed to create profile data",
     });
   } finally {
     await prisma.$disconnect();

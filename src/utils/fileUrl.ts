@@ -34,7 +34,26 @@ export async function getFileUrl(req: any): Promise<string | null> {
   const directory = req.file.destination.split("uploads/").pop() || "";
   return `/${directory}/${req.file.filename}`;
 }
-
+export function processMultipleFileUrls(req: any, fieldName: string): string[] {
+  try {
+    if (req.files && Array.isArray(req.files[fieldName])) {
+      const files = req.files as { [key: string]: Express.Multer.File[] };
+      return files[fieldName].map((file) => {
+        console.log("Processing file: =======>", file);
+        if (!file.destination || !file.filename) {
+          throw new Error("Invalid file object");
+        }
+        const normalizedDest = file.destination.replace(/\\/g, "/");
+        const directory = normalizedDest.split("uploads/").pop() || "";
+        return `/uploads/${directory}/${file.filename}`.replace(/\/+/g, "/");
+      });
+    }
+    return [];
+  } catch (error) {
+    console.error("Error processing multiple file URLs:", error);
+    return [];
+  }
+}
 export function processFileUrl(req: any, fieldName: string): string | null {
   const hostpath = `${req.protocol}://${req.headers.host}`;
   try {
@@ -266,3 +285,4 @@ export const resolvezFileUrls = ({
 
   return Array.isArray(records) ? records.map(transformItem) : transformItem(records);
 };
+

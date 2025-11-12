@@ -13,8 +13,8 @@ import {
 const router = Router();
 
 // router.get("/profile-of-customer/:id", getOneProfileController);
-router.post("/profile-of-customer", authenticate, uploadFiles("profile", true, ["image"]), valResult, createProfileController);
-router.put("/profile-of-customer/:id", authenticate, uploadFiles("profile", true, ["image"]), valResult, editProfileController);
+router.post("/profile-of-customer", authenticate, uploadFiles({ directory: "profile", separateByDate: true, allowDynamicFields: true }), valResult, createProfileController);
+router.put("/profile-of-customer/:id", authenticate, uploadFiles({ directory: "profile", separateByDate: true, allowDynamicFields: true }), valResult, editProfileController);
 router.get("/profile-of-customer", authenticate, getAllProfileController);
 router.get("/approved-user", authenticate, getApprovedController);
 

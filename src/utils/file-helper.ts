@@ -29,23 +29,52 @@ export const upload = (directory: string = "", separateByDate = false) =>
     }),
   });
 
-export const uploadFiles = (
-  directory: string = "",
+interface UploadFilesOptions {
+  directory?: string;
+  separateByDate?: boolean;
+  fields?: string[];
+  allowDynamicFields?: boolean;
+}
+
+export const uploadFiles = ({
+  directory = "",
   separateByDate = false,
-  fields: string[] = ["image"],
-) =>
-  multer({
-    storage: diskStorage({
-      destination: resolve(`${env.PWD}/uploads/${directory}`),
-      filename: (_, file, cb) => {
-        const ext = file.originalname.split(".").pop();
-        const fileName = dateDir + file.fieldname + setFileName() + `.${ext}`;
-        cb(null, `${fileName}`);
+  fields = ["image"],
+  allowDynamicFields = false,
+}: UploadFilesOptions = {}) => {
+  const storage = diskStorage({
+    destination: resolve(`${env.PWD}/uploads/${directory}`),
+    filename: (_, file, cb) => {
+      const ext = file.originalname.split(".").pop();
+      const fileName = dateDir + file.fieldname + setFileName() + `.${ext}`;
+      cb(null, `${fileName}`);
+    },
+  });
+
+  // ✅ ຖ້າ allowDynamicFields = true, ໃຊ້ .any() ແທນ .fields()
+  if (allowDynamicFields) {
+    return multer({
+      storage,
+      fileFilter: (req, file, cb) => {
+        // ✅ ຍອມຮັບທຸກ field ທີ່ຂຶ້ນຕົ້ນດ້ວຍຊື່ໃນ fields array
+        const isValid = fields.some((fieldName) =>
+          file.fieldname === fieldName || file.fieldname.startsWith(`${fieldName}_`),
+        );
+
+        if (isValid) {
+          cb(null, true);
+        } else {
+          cb(new Error(`Unexpected field: ${file.fieldname}`));
+        }
       },
-    }),
-  }).fields(
+    }).any();
+  }
+
+  // ✅ ຖ້າບໍ່, ໃຊ້ .fields() ແບບເກົ່າ
+  return multer({ storage }).fields(
     fields.map((name) => ({
       name,
-      maxCount: 1,
+      maxCount: 10,
     })),
   );
+};

@@ -14,8 +14,8 @@ import {
 const router = Router();
 
 router.get("/profile/:id", getOneProfileController);
-router.post("/profile", authenticate, uploadFiles("profile", true, ["image", "oldImage"]), valResult, createProfileController);
-router.put("/profile/:id", authenticate, uploadFiles("profile", true, ["image", "oldImage"]), valResult, editProfileController);
+router.post("/profile", authenticate, uploadFiles({ directory: "profile", separateByDate: true, allowDynamicFields: true }), valResult, createProfileController);
+router.put("/profile/:id", authenticate, uploadFiles({ directory: "profile", separateByDate: true, allowDynamicFields: true }), valResult, editProfileController);
 router.put("/profile-status/:id", authenticate, editStatusController);
 router.get("/approved", authenticate, getAllProfileController);
 
