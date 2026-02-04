@@ -17,21 +17,22 @@ datasource db {
 }
 
 model user {
-  id        Int       @id @default(autoincrement())
-  firstName String
-  lastName  String
-  email     String    @unique
-  phone     String    @unique
-  password  String
-  role      Role      @default(ADMIN)
-  isActive  Boolean   @default(true)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime? @db.Timestamp(6)
-  username  String?   @unique
-  companyId Int?
-  folder    folder[]
-  profile   profile[]
+  id           Int           @id @default(autoincrement())
+  firstName    String
+  lastName     String
+  email        String        @unique
+  phone        String        @unique
+  password     String
+  role         Role          @default(ADMIN)
+  isActive     Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  deletedAt    DateTime?     @db.Timestamp(6)
+  username     String?       @unique
+  companyId    Int?
+  folder       folder[]
+  profile      profile[]
+  folderPrices folderPrice[]
 
   @@index([email])
   @@index([createdAt])
@@ -39,13 +40,35 @@ model user {
 }
 
 model folder {
-  id        Int       @id @default(autoincrement())
-  userId    Int
-  companyId Int?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  user      user      @relation(fields: [userId], references: [id])
-  profile   profile[]
+  id          Int           @id @default(autoincrement())
+  userId      Int
+  companyId   Int?
+  content     String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  user        user          @relation(fields: [userId], references: [id])
+  profile     profile[]
+  folderPrice folderPrice[]
+  number      number[]
+
+  @@index([createdAt])
+  @@index([updatedAt])
+}
+
+model folderPrice {
+  id         Int       @id @default(autoincrement())
+  userId     Int
+  companyId  Int
+  priceId    Int
+  folderId   Int
+  price      String
+  amount     Int
+  totalPrice Int
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  user       user      @relation(fields: [userId], references: [id])
+  folder     folder    @relation(fields: [folderId], references: [id])
+  profile    profile[]
 
   @@index([createdAt])
   @@index([updatedAt])
@@ -74,18 +97,38 @@ model profile {
   updatedAt          DateTime           @updatedAt
   deletedAt          DateTime?          @db.Timestamp(6)
   image              String?
-  oldImage           String?
+  files              String?
+  numberId           Int?
   userId             Int?
-  status             FolderRejectStatus @default(PENDING)
+  status             FolderRejectStatus @default(WAITING)
   folderId           Int?
   companyId          Int?
   folder             folder?            @relation(fields: [folderId], references: [id])
   user               user?              @relation(fields: [userId], references: [id])
+  folderPrice        folderPrice?       @relation(fields: [folderPriceId], references: [id])
+  folderPriceId      Int?
 
   @@index([nationalityId])
   @@index([ethnicityId])
   @@index([currentProvince])
   @@index([currentDistrict])
+  @@index([createdAt])
+  @@index([updatedAt])
+}
+
+model number {
+  id          Int       @id @default(autoincrement())
+  number      String
+  priceId     Int?
+  folderId    Int
+  isAvailable Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime? @db.Timestamp(6)
+  companyId   Int?
+  folder      folder    @relation(fields: [folderId], references: [id])
+
+  @@index([folderId])
   @@index([createdAt])
   @@index([updatedAt])
 }
@@ -153,8 +196,10 @@ enum ActionType {
 }
 
 enum FolderRejectStatus {
+  WAITING
   PENDING
   APPROVED
+  APPROVED_BY_COMPANY
   REJECTED
 }
 

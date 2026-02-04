@@ -2,7 +2,6 @@ import Router from "express";
 
 import authRouter from "./api/auth/router";
 import folderRouter from "./api/folder/router";
-import ProfileOfCustomer from "./api/profile-of-customer/router";
 import profileRouter from "./api/profile/router";
 import userRouter from "./api/user/router";
 
@@ -14,7 +13,6 @@ import {
 const router = Router();
 
 router.use(profileRouter);
-router.use(ProfileOfCustomer);
 router.use(userRouter);
 router.use(authRouter);
 router.use(folderRouter);

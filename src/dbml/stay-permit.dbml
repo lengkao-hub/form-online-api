@@ -23,15 +23,35 @@ Table user {
   companyId Int
   folder folder [not null]
   profile profile [not null]
+  folderPrices folderPrice [not null]
 }
 
 Table folder {
   id Int [pk, increment]
   userId Int [not null]
   companyId Int
+  content String
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
   user user [not null]
+  profile profile [not null]
+  folderPrice folderPrice [not null]
+  number number [not null]
+}
+
+Table folderPrice {
+  id Int [pk, increment]
+  userId Int [not null]
+  companyId Int [not null]
+  priceId Int [not null]
+  folderId Int [not null]
+  price String [not null]
+  amount Int [not null]
+  totalPrice Int [not null]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  user user [not null]
+  folder folder [not null]
   profile profile [not null]
 }
 
@@ -58,13 +78,29 @@ Table profile {
   updatedAt DateTime [not null]
   deletedAt DateTime
   image String
-  oldImage String
+  files String
+  numberId Int
   userId Int
-  status FolderRejectStatus [not null, default: 'PENDING']
+  status FolderRejectStatus [not null, default: 'WAITING']
   folderId Int
   companyId Int
   folder folder
   user user
+  folderPrice folderPrice
+  folderPriceId Int
+}
+
+Table number {
+  id Int [pk, increment]
+  number String [not null]
+  priceId Int
+  folderId Int [not null]
+  isAvailable Boolean [not null, default: true]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  deletedAt DateTime
+  companyId Int
+  folder folder [not null]
 }
 
 Enum folderType {
@@ -128,8 +164,10 @@ Enum ActionType {
 }
 
 Enum FolderRejectStatus {
+  WAITING
   PENDING
   APPROVED
+  APPROVED_BY_COMPANY
   REJECTED
 }
 
@@ -140,6 +178,14 @@ Enum applicationDependBy {
 
 Ref: folder.userId > user.id
 
+Ref: folderPrice.userId > user.id
+
+Ref: folderPrice.folderId > folder.id
+
 Ref: profile.folderId > folder.id
 
 Ref: profile.userId > user.id
+
+Ref: profile.folderPriceId > folderPrice.id
+
+Ref: number.folderId > folder.id

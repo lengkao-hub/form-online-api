@@ -1,6 +1,5 @@
 
 import { AuthSwaggerDocs } from "../api/auth/swagger";
-import { ProfileOfCustomerSwaggerDocs } from "../api/profile-of-customer/swagger";
 import { ProfileSwaggerDocs } from "../api/profile/swagger";
 import { UserSwaggerDocs } from "../api/user/swagger";
 import { PaginatedResponseSwaggerDocs } from "./paginate";
@@ -16,6 +15,5 @@ export const RegistrySwaggerDocs = {
     ...AuthSwaggerDocs.paths,
     ...UserSwaggerDocs.paths,
     ...ProfileSwaggerDocs.paths,
-    ...ProfileOfCustomerSwaggerDocs.paths,
   },
 };

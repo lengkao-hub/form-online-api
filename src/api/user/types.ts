@@ -8,7 +8,6 @@ export interface TokenPayload {
   lastName: string;
   username?: string;
   companyId?: number | null;
-
 }
 
 export enum Roles {
@@ -18,7 +17,6 @@ export enum Roles {
   POLICE_COMMANDER = "POLICE_COMMANDER",
   POLICE_PRODUCTION = "POLICE_PRODUCTION",
   VERSIFICATION_OFFICER = "VERSIFICATION_OFFICER"
-
 }
 
 export interface UserRecord {

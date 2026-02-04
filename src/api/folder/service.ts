@@ -1,9 +1,9 @@
+
 import { prisma } from "src/prisma";
 
-export const getAllService = async (companyId: number) => {
+export const getAllService = async () => {
   const data = await prisma.folder.findMany({
-    where: {
-      companyId: companyId,
+    where: { 
       profile: {
         some: {
           status: "PENDING",
@@ -21,6 +21,7 @@ export const getAllService = async (companyId: number) => {
         },
       },
       profile: true,
+      folderPrice: true,
     },
     orderBy: {
       createdAt: "desc",

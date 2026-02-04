@@ -1,26 +1,24 @@
 /* eslint-disable no-magic-numbers */
-import { Prisma } from "@prisma/client";
+import { FolderRejectStatus, Prisma } from "@prisma/client";
 import { endOfDay, startOfDay } from "date-fns";
 import { dateTimeFormat } from "../../utils/dateFormat";
 
 export function buildProfileRecord({
   profile,
   companyId,
-  barcode,
-  oldImage,
+  userId,
   imagePath,
+  status,
 }: {
   profile: any;
   imagePath: any;
   companyId: number;
-  barcode: string;
-  oldImage?: any;
+  userId: number;
+  status: any
 }) {
   const result = {
     image: imagePath,
-    oldImage: oldImage || null,
     firstName: profile.firstName,
-    barcode: parseInt(barcode!, 10),
     lastName: profile.lastName,
     phoneNumber: profile.phoneNumber || null,
     dateOfBirth: profile.dateOfBirth,
@@ -37,6 +35,8 @@ export function buildProfileRecord({
     overseasCountryId: parseInt(profile.overseasCountryId, 10) || null,
     overseasProvince: profile.overseasProvince || null,
     companyId: companyId,
+    userId: userId,
+    status: status,
     updatedAt: new Date(),
   };
   return result;
@@ -86,11 +86,9 @@ export function buildUpdateProfileRecord({
 export function buildEditProfileRecord({
   imagePath,
   profile,
-  oldImage,
 }: {
   profile: Record<string, any>;
   imagePath: string | null;
-  oldImage: any;
 }) {
   const parseDate = (dateStr: string | undefined | null) => {
     if (!dateStr) {
@@ -102,7 +100,6 @@ export function buildEditProfileRecord({
   };
   const newRecord = {
     image: imagePath,
-    oldImage: oldImage || null,
     firstName: profile.firstName,
     lastName: profile.lastName,
     phoneNumber: profile.phoneNumber,
@@ -191,21 +188,22 @@ export const buildWhereClause = ({
   search,
   gender,
   year,
-  date,
+  status,
   companyId,
+  date,
 }: {
   search?: string;
   gender?: string;
   year?: string,
+  status?: string,
+  companyId?: number;
   date?: Date;
   deletedAt?: string;
-  companyId?: number;
+
 }): Prisma.profileWhereInput => {
   const whereClause: Prisma.profileWhereInput = {
   };
-  whereClause.status = {
-    in: ["APPROVED"],
-  };
+
   if (search) {
     whereClause.OR = [
       { firstName: { contains: search, mode: "insensitive" } },
@@ -233,6 +231,9 @@ export const buildWhereClause = ({
   }
   if (companyId) {
     whereClause.companyId = companyId;
+  }
+  if (status) {
+    whereClause.status = status as FolderRejectStatus;
   }
 
   return whereClause;
@@ -273,4 +274,52 @@ export const buildReportWhereClause = ({
   }
 
   return whereClause;
+};
+// Helper function ສຳລັບປະມວນຜົນ files
+const processItemFiles = (files: any[]): string => {
+  const filePaths: string[] = [];
+  for (const file of files) {
+    const path = typeof file === "string" ? file : file.path;
+    filePaths.push(path);
+  }
+  return JSON.stringify(filePaths);
+};
+
+// Helper function ສຳລັບສ້າງ update data
+const createUpdateData = (
+  item: any,
+  folderId: number,
+  folderPriceId: number,
+) => {
+  const updateData: any = {
+    status: "PENDING",
+    folderId,
+    folderPriceId,
+  };
+
+  if (item.files && item.files.length > 0) {
+    updateData.files = processItemFiles(item.files);
+  }
+
+  return updateData;
+}; 
+// Main function
+export const processRecordItems = (
+  tx: any,
+  record: any,
+  folderId: number,
+) => {
+  const promises: any[] = [];
+
+  for (const item of record.items) {
+    const updateData = createUpdateData(item, folderId, record.folderPriceId);
+
+    const promise = tx.profile.update({
+      where: { id: item.id },
+      data: updateData,
+    });
+    promises.push(promise);
+  }
+
+  return promises;
 };

@@ -78,3 +78,23 @@ export const uploadFiles = ({
     })),
   );
 };
+export const uploadFile = (
+  directory: string = "",
+  separateByDate = false,
+  fields: string[] = ["image"],
+) =>
+  multer({
+    storage: diskStorage({
+      destination: resolve(`${env.PWD}/uploads/${directory}`),
+      filename: (_, file, cb) => {
+        const ext = file.originalname.split(".").pop();
+        const fileName = dateDir + file.fieldname + setFileName() + `.${ext}`;
+        cb(null, `${fileName}`);
+      },
+    }),
+  }).fields(
+    fields.map((name) => ({
+      name,
+      maxCount: 20,
+    })),
+  );

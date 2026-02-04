@@ -1,37 +1,19 @@
 
-/* eslint-disable max-lines */
-
 import { Prisma, profile } from "@prisma/client";
 import { Request } from "express";
 import logger from "../../middleware/logger/config";
 import { prisma } from "../../prisma/index";
 import { addIndexToResults } from "../../utils/addIndexToResults";
-import { resolveImageUrls } from "../../utils/fileUrl";
+import { getImagePath, resolveImageUrls } from "../../utils/fileUrl";
 import { PaginateCalucations } from "../../utils/pagination";
-import {
-  buildWhereClause,
-  formatDate,
-} from "./lib";
-import { IGetAllProfilesServiceProps } from "./types";
+import { buildWhereClause, formatDate, processRecordItems } from "./lib";
+import { CreateNewCardServiceParams, IGetAllProfilesServiceProps, IGetOneProfileProp, UpdateStatusParams } from "./types";
+
 export const getAllProfilesService = async ({
-  page,
-  limit,
-  paginate,
-  search,
-  gender,
-  year,
-  date,
-  companyId,
-  req,
-}: IGetAllProfilesServiceProps & { excludeApplications?: boolean, barcode?: number, req: Request, officeIds?: string, companyId?: number }) => {
+  page, limit, paginate, search, gender, year, date, companyId, status, req,
+}: IGetAllProfilesServiceProps & { req: Request, companyId?: number, userId?: number }) => {
   try {
-    const whereClause = buildWhereClause({
-      search,
-      gender,
-      year,
-      date,
-      companyId,
-    });
+    const whereClause = buildWhereClause({ search, gender, year, date, companyId, status });
     const queryFn = async (skip: number, take: number) => {
       const data = await prisma.profile.findMany({
         skip,
@@ -41,6 +23,40 @@ export const getAllProfilesService = async ({
       });
       const totalCount = await prisma.profile.count({
         where: whereClause,
+      });
+      return [data, totalCount];
+    };
+    const paginationResult = await PaginateCalucations({ page, limit, queryFn, paginate });
+    const dataWithIndex = addIndexToResults(paginationResult.result, page, limit);
+    const result = resolveImageUrls({ records: dataWithIndex, fields: ["image"], request: req, nestedKey: "profileGallery", nestedImageField: "gallery.image" });
+    const formattedDate = formatDate(result);
+    return {
+      ...paginationResult,
+      result: formattedDate,
+    };
+  } catch (error) {
+    logger.error(error);
+  } finally {
+    await prisma.$disconnect();
+  }
+};
+export const getAllApprovedService = async ({
+  page, limit, paginate, search, gender, year, date, status, req, userId,
+}: IGetAllProfilesServiceProps & { req: Request, userId: number }) => {
+  try {
+    const whereClause = buildWhereClause({  search, gender, year, date, status });
+    const queryFn = async (skip: number, take: number) => {
+      const data = await prisma.profile.findMany({
+        skip,
+        take,
+        where: {
+          ...whereClause,
+          userId: userId,
+        },
+        orderBy: { createdAt: "desc" },
+      });
+      const totalCount = await prisma.profile.count({
+        where: { userId: userId, status: status },
       });
       return [data, totalCount];
     };
@@ -59,43 +75,9 @@ export const getAllProfilesService = async ({
   }
 };
 
-// export const getProfileLogService = async (req: Request) => {
-//   const paginationParams = validatePaginationParams(req);
-//   const { profileId, action } = req.query;
-//   const { page, limit, paginate } = paginationParams;
-//   const queryFn = async (skip: number, take: number) => {
-//     const where: Record<string, any> = {
-//     };
-//     if (profileId) {
-//       where.profileId = Number(profileId);
-//     }
-//     if (action) {
-//       where.action = action;
-//     }
-//     const data = await prisma.profileLog.findMany({ where, skip, take, orderBy: { id: "desc" } });
-//     const totalCount = await prisma.profileLog.count({ where });
-//     return [data, totalCount];
-//   };
-//   const paginationResult = await PaginateCalucations({ page, limit, queryFn, paginate });
-//   const dataWithIndex = addIndexToResults(paginationResult.result, page, limit);
-//   return {
-//     ...paginationResult,
-//     result: dataWithIndex,
-//   };
-// };
-
-interface IGetOneProfileProp {
-  id: number,
-  page: number,
-  limit: number,
-  paginate: boolean
-}
-export const getOneProfileService = async ({ id, page, limit, paginate, req }: IGetOneProfileProp & { req: Request }) => {
+export const getDetailsProfileService = async ({ id, page, limit, paginate, req }: IGetOneProfileProp & { req: Request }) => {
   try {
-    const profileId = Number(id);
-    if (isNaN(profileId)) {
-      throw new Error("Invalid profile ID: ID must be a number.");
-    }
+    const profileId = Number(id); 
     const queryFn = async (skip: number, take: number) => {
       const data = await prisma.profile.findMany({
         skip,
@@ -111,7 +93,7 @@ export const getOneProfileService = async ({ id, page, limit, paginate, req }: I
     };
     const paginationResult = await PaginateCalucations({ page, limit, queryFn, paginate });
     const dataWithIndex = addIndexToResults(paginationResult.result, page, limit);
-    const result = resolveImageUrls({ records: dataWithIndex, fields: ["image", "oldImage"], request: req, nestedKey: "profileGallery", nestedImageField: "gallery.image" });
+    const result = resolveImageUrls({ records: dataWithIndex, fields: ["image"], request: req, nestedKey: "profileGallery", nestedImageField: "gallery.image" });
     const formattedDate = formatDate(result);
     return {
       ...paginationResult,
@@ -124,208 +106,25 @@ export const getOneProfileService = async ({ id, page, limit, paginate, req }: I
     await prisma.$disconnect();
   }
 };
-// export const aggregationProfileServices = async ({
-//   start,
-//   end,
-//   officeId,
-// }: {
-//   start: string;
-//   end: string;
-//   officeId: number | null;
-// }) => {
-//   try {
-//     const startDate = new Date(start);
-//     const endDate = new Date(end);
-
-//     const baseWhere = {
-//       deletedAt: null,
-//       ...excludeBlacklistedProfiles,
-//     };
-//     const whereWithOffice =
-//     officeId !== null && !Number.isNaN(officeId) && officeId !== 0
-//       ? { ...baseWhere, officeId }
-//       : baseWhere;
-//     const [total, maleCounts, femaleCounts, newProfilesCount, femaleNewProfilesCount] = await Promise.all([
-//       prisma.profile.count({
-//         where: whereWithOffice,
-//       }),
-//       prisma.profile.count({
-//         where: {
-//           ...whereWithOffice,
-//           gender: { in: ["MALE", "M"] },
-//         },
-//       }),
-//       prisma.profile.count({
-//         where: {
-//           ...whereWithOffice,
-//           gender: { in: ["FEMALE", "F"] },
-//         },
-//       }),
-//       prisma.profile.count({
-//         where: {
-//           ...whereWithOffice,
-//           createdAt: { gte: startDate, lte: endDate },
-//         },
-//       }),
-//       prisma.profile.count({
-//         where: {
-//           ...whereWithOffice,
-//           createdAt: { gte: startDate, lte: endDate },
-//           gender: { in: ["FEMALE", "F"] },
-//         },
-//       }),
-//     ]);
-
-//     return { total, male: maleCounts, female: femaleCounts, newProfilesCount, femaleNewProfilesCount };
-//   } catch (error) {
-//     logger.error("Error in aggregationProfileServices:", error);
-//     throw new Error("Failed to aggregate profile data");
-//   } finally {
-//     await prisma.$disconnect();
-//   }
-// };
-
-// export const reportProfileServices = async ({
-//   start,
-//   end,
-//   gender,
-//   nationality,
-//   officeIds,
-// }: {
-//   start: string;
-//   end?: string;
-//   gender?: string;
-//   nationality?:string;
-//   officeIds?: number[];
-// }) => {
-//   try {
-//     const whereClause = buildReportWhereClause({
-//       start,
-//       end,
-//       gender,
-//       nationality,
-//       officeIds,
-//     });
-
-//     const grouped = await prisma.profile.groupBy({
-//       by: ["nationalityId", "gender" ],
-//       where: {
-//         ...whereClause,
-//       },
-//       _count: {
-//         _all: true,
-//       },
-//     });
-
-//     const tableData = await Promise.all(grouped.map(async (item) => {
-//       const nationality = await prisma.nationality.findUnique({
-//         where: { id: item.nationalityId },
-//       });
-
-//       return {
-//         nationality: nationality?.name ?? "Unknown",
-//         gender: item.gender,
-//         count: item._count._all,
-//       };
-//     }));
-
-//     const finalTable = tableData.reduce((acc, item) => {
-//       const { nationality, gender, count } = item;
-//       const key = `${nationality}`;
-
-//       if (!acc[key]) {
-//         acc[key] = {
-//           nationality,
-//           male: 0,
-//           female: 0,
-//         };
-//       }
-
-//       if (gender === "MALE" || gender === "M") { acc[key].male += count; }
-//       else if (gender === "FEMALE" || gender === "F") { acc[key].female += count; }
-
-//       return acc;
-//     }, {} as Record<string, any>);
-
-//     const finalRows = Object.values(finalTable);
-//     const uniqueNationalities = new Set(finalRows.map((row) => row.nationality)).size;
-
-//     const total = finalRows.reduce(
-//       (sum, row) => {
-//         sum.male += row.male;
-//         sum.female += row.female;
-//         return sum;
-//       },
-//       { male: 0, female: 0 },
-//     );
-
-//     return {
-//       rows: finalRows,
-//       total,
-//       nationalityCount: uniqueNationalities,
-//     };
-//   } catch (error) {
-//     logger.error("Error in aggregationProfileServices:", error);
-//     throw new Error("Failed to aggregate profile data");
-//   } finally {
-//     await prisma.$disconnect();
-//   }
-// };
-
-// export const aggregationChartProfileServices = async ({
-//   officeId,
-// }: {
-//   officeId: number;
-// }) => {
-//   try {
-//     const result = await getAggregatedProfileData({ officeId });
-//     return result;
-//   } catch (error) {
-//     logger.error("Error in aggregationChartProfileServices:", error);
-//     throw new Error("Failed to aggregate profile data");
-//   } finally {
-//     await prisma.$disconnect();
-//   }
-// };
-
-// const getAggregatedProfileData = async ({
-//   officeId,
-// }: {
-//   officeId: number;
-// }): Promise<{ month: string; male: number; female: number }[]> => {
-//   const currentDate = new Date();
-//   const sixMonthsAgo = new Date(currentDate);
-//   sixMonthsAgo.setMonth(currentDate.getMonth() - 6);
-//   const profiles = await fetchProfilesCreatedInLastSixMonths(
-//     sixMonthsAgo,
-//     officeId,
-//   );
-//   const months = generateLastSixMonths();
-//   return aggregateProfilesByGender(profiles, months);
-// };
-
-// const fetchProfilesCreatedInLastSixMonths = async (
-//   sixMonthsAgo: Date,
-//   officeId: number,
-// ) => {
-//   const baseWhere = {
-//     deletedAt: null,
-//     ...excludeBlacklistedProfiles,
-//   };
-//   const whereWithOffice =
-//   officeId !== null && !Number.isNaN(officeId) && officeId !== 0
-//     ? { ...baseWhere, officeId }
-//     : baseWhere;
-//   return prisma.profile.findMany({
-//     where: {
-//       ...whereWithOffice,
-//       createdAt: {
-//         gte: sixMonthsAgo,
-//       },
-//       ...excludeBlacklistedProfiles,
-//     },
-//   });
-// };
+export const getOneProfileService = async ({ id, req }: { id: number | string, req: Request }) => {
+  try {
+    const profileId = Number(id); 
+    const data = await prisma.profile.findUnique({
+      where:
+      {
+        id: profileId,
+      },
+    }); 
+    const dataWithImagePath = getImagePath({ req, data, field: "image" }); 
+    const result = resolveImageUrls({ records: dataWithImagePath, fields: ["gallery.image"], request: req, nestedKey: "profileGallery", nestedImageField: "gallery.image" });
+    return { result };
+  } catch (error) {
+    logger.error("Error in getOneProfileService:", error);
+    throw error;
+  } finally {
+    await prisma.$disconnect();
+  }
+};
 
 export const createProfileService = async (
   profileData: Omit<profile, "id">,
@@ -340,6 +139,66 @@ export const createProfileService = async (
     logger.error(error);
     throw new Error("Failed to create profile data");
   }
+};
+
+export const createNewCardService = async ({
+  companyId,
+  userId, 
+  groupedByPrice,
+}: CreateNewCardServiceParams) => {
+  const transactionResult = await prisma.$transaction(async (tx) => {
+    const folder = await tx.folder.create({
+      data: { companyId, userId },
+    });
+    const folderId = folder.id;
+    const folderPriceRecords: any[] = [];
+
+    // ແທນທີ່ Object.entries().map() ດ້ວຍ for...of
+    const entries = Object.entries(groupedByPrice); 
+    for (const [priceId, items] of entries) { 
+      const itemsArray = items as any[];
+      const amount = itemsArray.length;
+      const priceValue = Number(itemsArray[0].price);
+
+      if (isNaN(priceValue)) {
+        throw new Error(`Invalid price value for priceId ${priceId}`);
+      }
+
+      const totalPrice = amount * priceValue;
+      const priceIdNumber = Number(priceId);
+
+      const folderPrice = await tx.folderPrice.create({
+        data: {
+          userId,
+          companyId,
+          priceId: priceIdNumber,
+          folderId,
+          price: String(priceValue),
+          amount,
+          totalPrice,
+        },
+      }); 
+      folderPriceRecords.push({
+        folderPriceId: folderPrice.id,
+        priceId: priceIdNumber,
+        items: itemsArray,
+      });
+    } 
+    const updatePromises: any[] = [];
+    for (const record of folderPriceRecords) {
+      const recordPromises = processRecordItems(tx, record, folderId);
+      updatePromises.push(...recordPromises);
+    }
+
+    await Promise.all(updatePromises);
+
+    return {
+      folderId,
+      totalRecords: updatePromises.length,
+    };
+  });
+
+  return transactionResult;
 };
 export const editProfileService = async ({
   data,
@@ -360,32 +219,59 @@ export const editProfileService = async ({
     logger.error(error);
     throw new Error("Failed to editing profile data");
   }
-};
+}; 
+export const editStatusService = async ({
+  folderId,
+  status,
+  content,
+}: UpdateStatusParams) => {
+  const result = await prisma.$transaction(async (tx) => {
+    const updatedProfiles = await tx.profile.updateMany({
+      where: { folderId },
+      data: { status },
+    });
 
-// export const createProfileLogService = async ({
-//   action,
-//   data,
-//   changes,
-//   changedBy,
-//   tx,
-// }: {
-//   action: ActionType;
-//   data: Record<string, any>;
-//   changes?: Record<string, any>;
-//   changedBy: number;
-//   tx: Prisma.TransactionClient
-// }) => {
-//   const result = {
-//     profileId: data.id,
-//     action,
-//     changedBy,
-//     oldFirstName: action === ActionType.CREATE ? null : data.firstName ?? null,
-//     newFirstName: action === ActionType.CREATE ? data.firstName ?? null : changes?.firstName ?? null,
-//     oldLastName: action === ActionType.CREATE ? null : data.lastName ?? null,
-//     newLastName: action === ActionType.CREATE ? data.lastName ?? null : changes?.lastName ?? null,
-//     oldPhoneNumber: action === ActionType.CREATE ? null : data.phoneNumber ?? null,
-//     newPhoneNumber: action === ActionType.CREATE ? data.phoneNumber ?? null : changes?.phoneNumber ?? null,
-//   };
-//   await tx.profileLog.create({ data: result });
-//   return result;
-// };
+    const updatedFolder = await tx.folder.update({
+      where: { id: folderId },
+      data: {
+        content,
+      },
+    });
+
+    return {
+      profilesUpdated: updatedProfiles.count,
+      folder: updatedFolder,
+    };
+  });
+
+  return result;
+};
+export const getRejectedService = async (id: number) => {
+  const data = await prisma.folder.findMany({
+    where: {
+      userId: id,
+      profile: {
+        some: {
+          status: "REJECTED",
+        },
+      },
+    },
+    include: {
+      user: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          phone: true,
+        },
+      },
+      profile: true,
+      folderPrice: true,
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+  return data;
+};
