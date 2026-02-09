@@ -47,6 +47,7 @@ model folder {
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
   user        user          @relation(fields: [userId], references: [id])
+  status      FolderRejectStatus  @default(PENDING)
   profile     profile[]
   folderPrice folderPrice[]
   number      number[]
@@ -99,10 +100,9 @@ model profile {
   image              String?
   files              String?
   numberId           Int?
-  userId             Int?
-  status             FolderRejectStatus @default(WAITING)
+  userId             Int? 
   folderId           Int?
-  companyId          Int?
+  companyId          Int? 
   folder             folder?            @relation(fields: [folderId], references: [id])
   user               user?              @relation(fields: [userId], references: [id])
   folderPrice        folderPrice?       @relation(fields: [folderPriceId], references: [id])
@@ -196,10 +196,8 @@ enum ActionType {
 }
 
 enum FolderRejectStatus {
-  WAITING
   PENDING
   APPROVED
-  APPROVED_BY_COMPANY
   REJECTED
 }
 
@@ -207,3 +205,4 @@ enum applicationDependBy {
   COMPANY
   VILLAGE
 }
+

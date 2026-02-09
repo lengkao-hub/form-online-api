@@ -14,8 +14,8 @@ import {
   createProfileService,
   editProfileService,
   editStatusService,
-  getAllApprovedService,
   getAllProfilesService,
+  getApprovedService,
   getDetailsProfileService,
   getOneProfileService,
   getRejectedService,
@@ -68,7 +68,7 @@ export const getApprovedController = async (req: Request, res: Response) => {
   const { search, gender, year, date, status } = req.query;
   const parsedDate = date ? new Date(date.toString()) : undefined;
   try {
-    const result = await getAllApprovedService({
+    const result = await getApprovedService({
       page: pagination.page,
       limit: pagination.limit,
       paginate: pagination.paginate,
@@ -178,9 +178,8 @@ export const editProfileController = async (req: Request, res: Response) => {
 export const editStatusController = async (req: Request, res: Response) => {
   try {
     const folderId = Number(req.params.id);
-    const { status: statusFromBody, content } = req.body;
-    const status = statusFromBody as FolderRejectStatus;
-
+    const content = req.body.content;
+    const status = req.body.status as FolderRejectStatus; 
     const result = await editStatusService({
       folderId,
       status,
@@ -221,7 +220,8 @@ export const deleteProfileController = async (req: Request, res: Response) => {
 export const getRejectController = async (req: Request, res: Response) => {
   try {
     const id = Number(dataTokenPayload(req, res)?.id);
-    const result = await getRejectedService(id);
+    const status = req.query.status as FolderRejectStatus;
+    const result = await getRejectedService(id, status);
     res.json({
       status: "ok",
       message: "success",
@@ -231,20 +231,17 @@ export const getRejectController = async (req: Request, res: Response) => {
     throw error;
   }
 };
-
 export const createProfileController = async (req: Request, res: Response) => {
   try {
     const companyId = Number(dataTokenPayload(req, res)?.companyId);
     const userId = Number(dataTokenPayload(req, res)?.id);
     const image = processFileUrl(req, "image");
-    const transactionResult = await prisma.$transaction(async (tx) => {
-      const status = "WAITING";
+    const transactionResult = await prisma.$transaction(async (tx) => { 
       const newProfile = buildProfileRecord({
         profile: req.body,
         imagePath: image,
         companyId,
         userId,
-        status,
       });
       const createdProfile = await createProfileService(newProfile as any, tx);
       return createdProfile;
@@ -269,7 +266,7 @@ export const createNewCardController = async ( req: Request, res: Response): Pro
   try {
     const companyId = Number(dataTokenPayload(req, res)?.companyId);
     const userId = Number(dataTokenPayload(req, res)?.id);
-
+    const status = req.query.status as FolderRejectStatus;
     const files =
       (req.files as { [fieldname: string]: Express.Multer.File[] })?.file || [];
 
@@ -291,10 +288,11 @@ export const createNewCardController = async ( req: Request, res: Response): Pro
     });
 
     const putdata: any[] = [];
-    const allIndexes = Object.keys(req.body).filter((key) => {
+    const allData = Object.keys(req.body).filter((key) => {
       return /^\d+$/.test(key);
     });
-    for (const index of allIndexes) { 
+    // ລວມໄຟ ແລະ ຂໍ້ມູນເຂົ້າໃນ putdata
+    for (const index of allData) { 
       const record = JSON.parse(req.body[index]);
       const files = fileMap[index] || [];
       const data = {
@@ -314,7 +312,7 @@ export const createNewCardController = async ( req: Request, res: Response): Pro
       acc[key].push(item);
       return acc;
     }, {});
-    const transactionResult = await createNewCardService({ companyId, userId , groupedByPrice }); 
+    const transactionResult = await createNewCardService({ companyId, userId , groupedByPrice, status }); 
      
     res.status(StatusCodes.CREATED).json({
       status: "success",

@@ -13,7 +13,7 @@ import { valResult } from "../../utils/validateResult";
 
 const router = Router();
 
-router.post("/user", authenticate, userSchemaCreate, valResult, createUserController);
+router.post("/user", userSchemaCreate, valResult, createUserController);
 router.get("/user", authenticate, getManyUserController);
 router.get("/user/:id", authenticate, getOneUserController);
 router.put("/user/:id", authenticate, valResult, updateUserEditAccountController);

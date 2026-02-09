@@ -1,5 +1,5 @@
 /* eslint-disable no-magic-numbers */
-import { FolderRejectStatus, Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { endOfDay, startOfDay } from "date-fns";
 import { dateTimeFormat } from "../../utils/dateFormat";
 
@@ -7,14 +7,12 @@ export function buildProfileRecord({
   profile,
   companyId,
   userId,
-  imagePath,
-  status,
+  imagePath, 
 }: {
   profile: any;
   imagePath: any;
   companyId: number;
-  userId: number;
-  status: any
+  userId: number; 
 }) {
   const result = {
     image: imagePath,
@@ -35,8 +33,7 @@ export function buildProfileRecord({
     overseasCountryId: parseInt(profile.overseasCountryId, 10) || null,
     overseasProvince: profile.overseasProvince || null,
     companyId: companyId,
-    userId: userId,
-    status: status,
+    userId: userId, 
     updatedAt: new Date(),
   };
   return result;
@@ -187,20 +184,18 @@ export const aggregateProfilesByGender = (
 export const buildWhereClause = ({
   search,
   gender,
-  year,
-  status,
+  year, 
   companyId,
   date,
 }: {
   search?: string;
   gender?: string;
-  year?: string,
-  status?: string,
+  year?: string, 
   companyId?: number;
   date?: Date;
   deletedAt?: string;
 
-}): Prisma.profileWhereInput => {
+}): Prisma.profileWhereInput => { 
   const whereClause: Prisma.profileWhereInput = {
   };
 
@@ -231,10 +226,7 @@ export const buildWhereClause = ({
   }
   if (companyId) {
     whereClause.companyId = companyId;
-  }
-  if (status) {
-    whereClause.status = status as FolderRejectStatus;
-  }
+  } 
 
   return whereClause;
 };
@@ -291,8 +283,7 @@ const createUpdateData = (
   folderId: number,
   folderPriceId: number,
 ) => {
-  const updateData: any = {
-    status: "PENDING",
+  const updateData: any = { 
     folderId,
     folderPriceId,
   };
@@ -306,13 +297,13 @@ const createUpdateData = (
 // Main function
 export const processRecordItems = (
   tx: any,
-  record: any,
+  recordData: any,
   folderId: number,
 ) => {
   const promises: any[] = [];
 
-  for (const item of record.items) {
-    const updateData = createUpdateData(item, folderId, record.folderPriceId);
+  for (const item of recordData.items) {
+    const updateData = createUpdateData(item, folderId, recordData.folderPriceId);
 
     const promise = tx.profile.update({
       where: { id: item.id },

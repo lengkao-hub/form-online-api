@@ -1,14 +1,14 @@
 
+import { FolderRejectStatus } from "@prisma/client";
 import { prisma } from "src/prisma";
 
-export const getAllService = async () => {
+export const getAllService = async (wherefolder: { status: FolderRejectStatus; companyId: number }) => {
+  // console.log("companyId:", companyId);
+  // console.log("status:", status);
   const data = await prisma.folder.findMany({
-    where: { 
-      profile: {
-        some: {
-          status: "PENDING",
-        },
-      },
+    where: {
+      companyId: wherefolder.companyId,
+      status: wherefolder.status,
     },
     include: {
       user: {

@@ -20,6 +20,7 @@ export interface CreateNewCardServiceParams {
   companyId: number;
   userId: number; 
   groupedByPrice: Record<number, any[]>;
+  status: FolderRejectStatus;
 }
 export interface IGetOneProfileProp {
   id: number,

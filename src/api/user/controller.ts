@@ -82,7 +82,7 @@ export const getOneUserController = async (req: Request, res: Response) => {
 
 export const createUserController = async (req: Request, res: Response) => {
   try {
-    const companyId = dataTokenPayload(req, res)?.companyId;
+    const companyId = 1;
     const { firstName, phone, email, password, lastName, role, username, isActive } = req.body;
     const isPhoneExists = await isPhoneNumberTaken(phone);
     const hashedPassword = hashPassword(password);

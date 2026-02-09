@@ -1,5 +1,5 @@
 
-import { Prisma, profile } from "@prisma/client";
+import { FolderRejectStatus, Prisma, profile } from "@prisma/client";
 import { Request } from "express";
 import logger from "../../middleware/logger/config";
 import { prisma } from "../../prisma/index";
@@ -10,15 +10,20 @@ import { buildWhereClause, formatDate, processRecordItems } from "./lib";
 import { CreateNewCardServiceParams, IGetAllProfilesServiceProps, IGetOneProfileProp, UpdateStatusParams } from "./types";
 
 export const getAllProfilesService = async ({
-  page, limit, paginate, search, gender, year, date, companyId, status, req,
+  page, limit, paginate, search, gender, year, date, companyId, req, status,
 }: IGetAllProfilesServiceProps & { req: Request, companyId?: number, userId?: number }) => {
   try {
-    const whereClause = buildWhereClause({ search, gender, year, date, companyId, status });
+    const whereClause = buildWhereClause({ search, gender, year, date, companyId });
     const queryFn = async (skip: number, take: number) => {
       const data = await prisma.profile.findMany({
         skip,
         take,
-        where: whereClause,
+        where: {
+          folder: {
+            status: status,  // folder ມີສະຖານະເປັນ pending
+          },
+          ...whereClause,
+        },
         orderBy: { createdAt: "desc" },
       });
       const totalCount = await prisma.profile.count({
@@ -40,11 +45,11 @@ export const getAllProfilesService = async ({
     await prisma.$disconnect();
   }
 };
-export const getAllApprovedService = async ({
+export const getApprovedService = async ({
   page, limit, paginate, search, gender, year, date, status, req, userId,
 }: IGetAllProfilesServiceProps & { req: Request, userId: number }) => {
   try {
-    const whereClause = buildWhereClause({  search, gender, year, date, status });
+    const whereClause = buildWhereClause({  search, gender, year, date });
     const queryFn = async (skip: number, take: number) => {
       const data = await prisma.profile.findMany({
         skip,
@@ -52,11 +57,21 @@ export const getAllApprovedService = async ({
         where: {
           ...whereClause,
           userId: userId,
+          folder: {
+            status: status,  // folder ມີສະຖານະເປັນ pending
+          },
         },
         orderBy: { createdAt: "desc" },
       });
       const totalCount = await prisma.profile.count({
-        where: { userId: userId, status: status },
+        where: {
+          folderId: {
+            not: null,  // ມີ folderId (ບໍ່ແມ່ນ null)
+          },
+          folder: {
+            status: status,  // folder ມີສະຖານະເປັນ pending
+          },
+        },
       });
       return [data, totalCount];
     };
@@ -145,10 +160,11 @@ export const createNewCardService = async ({
   companyId,
   userId, 
   groupedByPrice,
+  status,
 }: CreateNewCardServiceParams) => {
   const transactionResult = await prisma.$transaction(async (tx) => {
     const folder = await tx.folder.create({
-      data: { companyId, userId },
+      data: { companyId, userId,status },
     });
     const folderId = folder.id;
     const folderPriceRecords: any[] = [];
@@ -185,8 +201,8 @@ export const createNewCardService = async ({
       });
     } 
     const updatePromises: any[] = [];
-    for (const record of folderPriceRecords) {
-      const recordPromises = processRecordItems(tx, record, folderId);
+    for (const recordData of folderPriceRecords) {
+      const recordPromises = processRecordItems(tx, recordData, folderId);
       updatePromises.push(...recordPromises);
     }
 
@@ -225,36 +241,29 @@ export const editStatusService = async ({
   status,
   content,
 }: UpdateStatusParams) => {
-  const result = await prisma.$transaction(async (tx) => {
-    const updatedProfiles = await tx.profile.updateMany({
-      where: { folderId },
-      data: { status },
-    });
 
-    const updatedFolder = await tx.folder.update({
-      where: { id: folderId },
-      data: {
-        content,
-      },
-    });
+  if (!folderId) {
+    throw new Error("Folder ID is required");
+  }
 
-    return {
-      profilesUpdated: updatedProfiles.count,
-      folder: updatedFolder,
-    };
+  const updatedFolder = await prisma.folder.update({
+    where: {
+      id: folderId,
+    },
+    data: {
+      status: status,                     // enum
+      content: content ?? null,           // ต้องเป็น string หรือ null
+    },
   });
 
-  return result;
+  return updatedFolder;
 };
-export const getRejectedService = async (id: number) => {
+
+export const getRejectedService = async (id: number, status: FolderRejectStatus) => {
   const data = await prisma.folder.findMany({
     where: {
       userId: id,
-      profile: {
-        some: {
-          status: "REJECTED",
-        },
-      },
+      status: status,
     },
     include: {
       user: {
