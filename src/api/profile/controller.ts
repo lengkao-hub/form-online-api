@@ -27,10 +27,9 @@ export const getAllProfileController = async (req: Request, res: Response) => {
   if (!pagination) {
     return;
   }
-  const { search, gender, year, date, status } = req.query;
+  const { search, gender, year, date, status, userId } = req.query;
   const parsedDate = date ? new Date(date.toString()) : undefined;
-  const companyId = dataTokenPayload(req, res)?.companyId;
-  const userId = dataTokenPayload(req, res)?.id;
+  const companyId = dataTokenPayload(req, res)?.companyId; 
   try {
     const result = await getAllProfilesService({
       page: pagination.page,
@@ -41,7 +40,7 @@ export const getAllProfileController = async (req: Request, res: Response) => {
       year: year?.toString(),
       date: parsedDate,
       companyId: companyId,
-      userId: userId,
+      userId: Number(userId),
       status: status,
       req,
     }); 
@@ -60,7 +59,7 @@ export const getAllProfileController = async (req: Request, res: Response) => {
 };
 export const getApprovedController = async (req: Request, res: Response) => {
 
-  const userId = Number(dataTokenPayload(req, res)?.id);
+  const userId = Number(req.query.userId);
   const pagination = validatePaginationParams(req);
   if (!pagination) {
     return;
@@ -179,7 +178,7 @@ export const editStatusController = async (req: Request, res: Response) => {
   try {
     const folderId = Number(req.params.id);
     const content = req.body.content;
-    const status = req.body.status as FolderRejectStatus; 
+    const status = req.body.status as FolderRejectStatus;  
     const result = await editStatusService({
       folderId,
       status,

@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
-import { TokenPayload } from "src/api/user/types";
+import { TokenPayload } from "../api/user/types";
 
 declare global {
   namespace Express {

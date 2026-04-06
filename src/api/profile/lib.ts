@@ -187,13 +187,14 @@ export const buildWhereClause = ({
   year, 
   companyId,
   date,
+  userId,
 }: {
   search?: string;
   gender?: string;
-  year?: string, 
+  year?: string;
   companyId?: number;
   date?: Date;
-  deletedAt?: string;
+  userId?: number;
 
 }): Prisma.profileWhereInput => { 
   const whereClause: Prisma.profileWhereInput = {
@@ -210,6 +211,9 @@ export const buildWhereClause = ({
   }
   if (gender) {
     whereClause.gender = { equals: gender, mode: "insensitive" };
+  }
+  if (userId) {
+    whereClause.userId = userId;
   }
   if (date) {
     whereClause.createdAt = {

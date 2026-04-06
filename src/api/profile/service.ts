@@ -10,19 +10,24 @@ import { buildWhereClause, formatDate, processRecordItems } from "./lib";
 import { CreateNewCardServiceParams, IGetAllProfilesServiceProps, IGetOneProfileProp, UpdateStatusParams } from "./types";
 
 export const getAllProfilesService = async ({
-  page, limit, paginate, search, gender, year, date, companyId, req, status,
+  page, limit, paginate, search, gender, year, date, companyId, req, userId,
 }: IGetAllProfilesServiceProps & { req: Request, companyId?: number, userId?: number }) => {
   try {
-    const whereClause = buildWhereClause({ search, gender, year, date, companyId });
+     
+    const whereClause = buildWhereClause({ search, gender, year, date, companyId, userId });
     const queryFn = async (skip: number, take: number) => {
       const data = await prisma.profile.findMany({
         skip,
         take,
-        where: {
-          folder: {
-            status: status,  // folder ມີສະຖານະເປັນ pending
-          },
+        where: { 
           ...whereClause,
+        },
+        include: {
+          folder: {
+            select: {
+              status: true,
+            },
+          },
         },
         orderBy: { createdAt: "desc" },
       });
@@ -49,19 +54,27 @@ export const getApprovedService = async ({
   page, limit, paginate, search, gender, year, date, status, req, userId,
 }: IGetAllProfilesServiceProps & { req: Request, userId: number }) => {
   try {
-    const whereClause = buildWhereClause({  search, gender, year, date });
+    const whereClause = buildWhereClause({  search, gender, year, date, userId });
     const queryFn = async (skip: number, take: number) => {
       const data = await prisma.profile.findMany({
         skip,
         take,
         where: {
-          ...whereClause,
-          userId: userId,
+          ...whereClause, 
           folder: {
-            status: status,  // folder ມີສະຖານະເປັນ pending
+            status: {
+              in: status,
+            },
           },
         },
         orderBy: { createdAt: "desc" },
+        include: {
+          folder: {
+            select: {
+              status: true,
+            },
+          },
+        },
       });
       const totalCount = await prisma.profile.count({
         where: {
@@ -69,7 +82,9 @@ export const getApprovedService = async ({
             not: null,  // ມີ folderId (ບໍ່ແມ່ນ null)
           },
           folder: {
-            status: status,  // folder ມີສະຖານະເປັນ pending
+            status: {
+              in: status,
+            },
           },
         },
       });
@@ -167,22 +182,18 @@ export const createNewCardService = async ({
       data: { companyId, userId,status },
     });
     const folderId = folder.id;
-    const folderPriceRecords: any[] = [];
-
-    // ແທນທີ່ Object.entries().map() ດ້ວຍ for...of
+    const folderPriceRecords: any[] = []; 
     const entries = Object.entries(groupedByPrice); 
     for (const [priceId, items] of entries) { 
       const itemsArray = items as any[];
       const amount = itemsArray.length;
       const priceValue = Number(itemsArray[0].price);
-
+      const name = itemsArray[0].priceName;
       if (isNaN(priceValue)) {
         throw new Error(`Invalid price value for priceId ${priceId}`);
-      }
-
-      const totalPrice = amount * priceValue;
-      const priceIdNumber = Number(priceId);
-
+      } 
+      const total = amount * priceValue;
+      const priceIdNumber = Number(priceId); 
       const folderPrice = await tx.folderPrice.create({
         data: {
           userId,
@@ -190,10 +201,11 @@ export const createNewCardService = async ({
           priceId: priceIdNumber,
           folderId,
           price: String(priceValue),
+          name: String(name),
           amount,
-          totalPrice,
+          total,
         },
-      }); 
+      });
       folderPriceRecords.push({
         folderPriceId: folderPrice.id,
         priceId: priceIdNumber,
@@ -204,16 +216,13 @@ export const createNewCardService = async ({
     for (const recordData of folderPriceRecords) {
       const recordPromises = processRecordItems(tx, recordData, folderId);
       updatePromises.push(...recordPromises);
-    }
-
-    await Promise.all(updatePromises);
-
+    } 
+    await Promise.all(updatePromises); 
     return {
       folderId,
       totalRecords: updatePromises.length,
     };
-  });
-
+  }); 
   return transactionResult;
 };
 export const editProfileService = async ({
@@ -244,8 +253,7 @@ export const editStatusService = async ({
 
   if (!folderId) {
     throw new Error("Folder ID is required");
-  }
-
+  } 
   const updatedFolder = await prisma.folder.update({
     where: {
       id: folderId,
@@ -254,8 +262,7 @@ export const editStatusService = async ({
       status: status,                     // enum
       content: content ?? null,           // ต้องเป็น string หรือ null
     },
-  });
-
+  }); 
   return updatedFolder;
 };
 
@@ -283,4 +290,4 @@ export const getRejectedService = async (id: number, status: FolderRejectStatus)
     },
   });
   return data;
-};
+}; 

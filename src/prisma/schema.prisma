@@ -63,8 +63,9 @@ model folderPrice {
   priceId    Int
   folderId   Int
   price      String
+  name       String
   amount     Int
-  totalPrice Int
+  total      Int
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
   user       user      @relation(fields: [userId], references: [id])
@@ -199,6 +200,7 @@ enum FolderRejectStatus {
   PENDING
   APPROVED
   REJECTED
+  APPROVED_BY_POLICE
 }
 
 enum applicationDependBy {

@@ -20,13 +20,12 @@ router.post("/profile", authenticate, uploadFile("profile", true, ["image"]), va
 router.put("/profile/:id", authenticate, uploadFile("profile", true, ["image"]), valResult, editProfileController);
 router.put("/new-card", authenticate, uploadFile("profile-file", true, ["file"]), createNewCardController);
 router.get("/profile", authenticate, getAllProfileController);
-router.get("/approved-profile", authenticate, getApprovedController);
+router.get("/status-profile", authenticate, getApprovedController);
 router.get("/rejected-profile", authenticate, getRejectController);
 
 router.put("/profile-status/:id", authenticate, editStatusController);
 
-router.get("/detail-profile/:id", authenticate, getDetailsProfileController);
-router.get("/approved", authenticate, getAllProfileController);
+router.get("/detail-profile/:id", authenticate, getDetailsProfileController); 
 router.get("/profile/:id", getOneProfileController);
 
 export default router;

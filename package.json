@@ -4,7 +4,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "nodemon --delay 400ms --exec ts-node src/index.ts",
-    "start": "pm2-runtime dist/index.js",
+    "start": "npx pm2-runtime dist/index.js",
     "build": "tsc && npm run copy-swagger",
     "copy-swagger": "npx copyfiles -u 1 src/swaggers/error-page.html src/swaggers/swagger-login.html dist",
     "createsuperuser": "ts-node src/api/user/createUserCLI.ts createsuperuser",
@@ -33,6 +33,9 @@
   "author": "",
   "license": "ISC",
   "description": "",
+  "_moduleAliases": {
+    "src": "dist"
+  },
   "prisma": {
     "schema": "./src/prisma/schema.prisma"
   },
@@ -98,6 +101,7 @@
     "globals": "^15.14.0",
     "husky": "^9.1.7",
     "nodemon": "^3.1.9",
+    "pm2": "^6.0.14",
     "prettier": "^3.4.2",
     "prisma": "^6.2.1",
     "prisma-dbml-generator": "^0.12.0",
