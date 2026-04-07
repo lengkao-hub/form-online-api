@@ -11,8 +11,7 @@ export const getAggregationChartProfileController = async (
     const { officeId } = req.query;
     const aggregationResult = await aggregationChartProfileServices({
       officeId: Number(officeId),
-    });
-    console.log("Aggregation Chart Profile Result:", aggregationResult);
+    }); 
     res.json({
       status: "ok",
       message: "Success",
