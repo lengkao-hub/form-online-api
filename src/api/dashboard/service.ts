@@ -36,20 +36,17 @@ const fetchProfilesCreatedInLastSixMonths = async (
   sixMonthsAgo: Date,
   officeId: number,
 ) => {
-//   const baseWhere = {
-//     deletedAt: null,
-//     ...excludeBlacklistedProfiles,
-//   };
   const whereWithOffice =
   officeId !== null && !Number.isNaN(officeId) && officeId !== 0
-    ? {  officeId }
-    : null;
+    ? { officeId }
+    : {};
   return prisma.profile.findMany({
     where: {
       ...whereWithOffice,
+      folderId: { not: null }, // ສະເພາະ profile ທີ່ມີ folderId
       createdAt: {
         gte: sixMonthsAgo,
-      }, 
+      },
     },
   });
 };
@@ -60,6 +57,7 @@ function generateLastSixMonths(): string[] {
 
   for (let i = SIX_MONTHS - 1; i >= 0; i--) {
     const currentDateIter = new Date(currentDate);
+    currentDateIter.setMonth(currentDate.getMonth() - i);
     const month = currentDateIter.toLocaleString("en-US", { month: "short" }); // Jan, Feb
     const year = currentDateIter.getFullYear();
 

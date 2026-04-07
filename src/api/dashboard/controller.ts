@@ -12,6 +12,7 @@ export const getAggregationChartProfileController = async (
     const aggregationResult = await aggregationChartProfileServices({
       officeId: Number(officeId),
     });
+    console.log("Aggregation Chart Profile Result:", aggregationResult);
     res.json({
       status: "ok",
       message: "Success",
