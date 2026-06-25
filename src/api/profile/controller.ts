@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 /* eslint-disable no-magic-numbers */
  
 import { FolderRejectStatus, profile } from "@prisma/client";
@@ -5,7 +6,7 @@ import { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
 import logger from "../../middleware/logger/config";
 import { prisma } from "../../prisma/index";
-import { processFileUrl } from "../../utils/fileUrl";
+import { getFileUrlsWithName, processFileUrl } from "../../utils/fileUrl";
 import { dataTokenPayload } from "../../utils/lib";
 import { validatePaginationParams } from "../../utils/pagination";
 import { buildEditProfileRecord, buildProfileRecord } from "./lib";
@@ -16,6 +17,7 @@ import {
   editStatusService,
   getAllProfilesService,
   getApprovedService,
+  getCompopoxService,
   getDetailsProfileService,
   getOneProfileService,
   getRejectedService,
@@ -57,10 +59,35 @@ export const getAllProfileController = async (req: Request, res: Response) => {
     });
   }
 };
+export const getCompopoxController = async (req: Request, res: Response) => {
+ 
+  const { search, userId } = req.query; 
+  const companyId = dataTokenPayload(req, res)?.companyId; 
+  try {
+    const result = await getCompopoxService({ 
+      search: search?.toString(), 
+      companyId: companyId,
+      userId: Number(userId), 
+      req,
+    }); 
+    res.json({
+      status: "ok",
+      message: "success",
+      result,
+    });
+  } catch (error) {
+    logger.error(error);
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+      status: "error",
+      message: "Failed to fetch application requests",
+    });
+  }
+};
 export const getApprovedController = async (req: Request, res: Response) => {
 
   const userId = Number(req.query.userId);
-  const pagination = validatePaginationParams(req);
+  const pagination = validatePaginationParams(req); 
+  const companyId = Number(dataTokenPayload(req, res)?.companyId);
   if (!pagination) {
     return;
   }
@@ -77,6 +104,7 @@ export const getApprovedController = async (req: Request, res: Response) => {
       date: parsedDate,
       status: status,
       userId: userId,
+      companyId,
       req,
     });
     res.json({
@@ -105,6 +133,7 @@ export const getDetailsProfileController = async (req: Request, res: Response) =
       paginate: pagination.paginate,
       req,
     });
+    console.log("result :", result);
     res.json({
       status: "ok",
       message: "success",
@@ -138,10 +167,25 @@ export const getOneProfileController = async (req: Request, res: Response) => {
     });
   }
 };
+const parseProfileFileIds = (value: any): number[] => {
+  if (Array.isArray(value)) {
+    return value;
+  }
+  if (typeof value === "string") {
+    try {
+      return JSON.parse(value);
+    } catch {
+      return [];
+    }
+  }
+  return [];
+};
+
 export const editProfileController = async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
     const getImage = await processFileUrl(req, "image"); 
+    const profileFileId = parseProfileFileIds(req.body.profileFileIds);
     const updatedRecord = buildEditProfileRecord({ profile: req.body, imagePath: getImage });
     if (req.body) {
       req.body.currentDistrict = parseInt(req.body.currentDistrict, 10);
@@ -156,7 +200,7 @@ export const editProfileController = async (req: Request, res: Response) => {
       req.body.nationalityId = parseInt(req.body.nationalityId, 10);
     }
     const transactionResult = await prisma.$transaction(async (tx) => {
-      const editProfile = await editProfileService({ data: updatedRecord as profile, id, tx });
+      const editProfile = await editProfileService({ data: updatedRecord as profile,profileFileId, id, tx });
       return editProfile;
     });
     res.status(StatusCodes.OK).json({
@@ -177,12 +221,13 @@ export const editProfileController = async (req: Request, res: Response) => {
 export const editStatusController = async (req: Request, res: Response) => {
   try {
     const folderId = Number(req.params.id);
-    const content = req.body.content;
+    const comment = req.body.comment;
     const status = req.body.status as FolderRejectStatus;  
+    console.log("folderId :", folderId, "comment :", comment, "status :", status);
     const result = await editStatusService({
       folderId,
       status,
-      content,
+      comment,
     });
     res.status(StatusCodes.OK).json({
       status: "success",
@@ -266,31 +311,31 @@ export const createNewCardController = async ( req: Request, res: Response): Pro
     const companyId = Number(dataTokenPayload(req, res)?.companyId);
     const userId = Number(dataTokenPayload(req, res)?.id);
     const status = req.query.status as FolderRejectStatus;
-    const files =
-      (req.files as { [fieldname: string]: Express.Multer.File[] })?.file || [];
+    const fileUrlInfos = getFileUrlsWithName(req);
 
     let recordIndexes = req.body.fileRecordIndex;
     if (typeof recordIndexes === "string") {
       recordIndexes = [recordIndexes];
     }
 
-    const fileMap: Record<string, Express.Multer.File[]> = {};
+    const fileMap: Record<string, { file: string; name: string }[]> = {};
 
-    files.forEach((file, i) => {
+    fileUrlInfos.forEach((info, i) => {
       const recordIndex = recordIndexes?.[i];
-      if (!recordIndex) 
-      { return; }
+      if (!recordIndex) {
+        return;
+      }
       if (!fileMap[recordIndex]) {
         fileMap[recordIndex] = [];
       }
-      fileMap[recordIndex].push(file);
+      fileMap[recordIndex].push(info);
     });
 
     const putdata: any[] = [];
     const allData = Object.keys(req.body).filter((key) => {
       return /^\d+$/.test(key);
     });
-    // ລວມໄຟ ແລະ ຂໍ້ມູນເຂົ້າໃນ putdata
+    // ລວມ { file, name } ແລະ ຂໍ້ມູນເຂົ້າໃນ putdata
     for (const index of allData) { 
       const record = JSON.parse(req.body[index]);
       const files = fileMap[index] || [];
@@ -311,8 +356,7 @@ export const createNewCardController = async ( req: Request, res: Response): Pro
       acc[key].push(item);
       return acc;
     }, {});
-    const transactionResult = await createNewCardService({ companyId, userId , groupedByPrice, status }); 
-     
+    const transactionResult = await createNewCardService({ companyId, userId , groupedByPrice, status });
     res.status(StatusCodes.CREATED).json({
       status: "success",
       message: "Profile New card successfully with files updated",

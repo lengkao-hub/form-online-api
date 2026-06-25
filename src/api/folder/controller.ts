@@ -27,8 +27,19 @@ export const getAllFolderController = async ( req: Request, res: Response ) => {
 };
 export const getAllFolderControllers = async ( req: Request, res: Response ) => {
   try {  
-    const status= req.query.status as FolderRejectStatus; 
-    const result = await getAllServices(status); 
+    // Fix: handle when status comes as nested object from frontend
+    let status: FolderRejectStatus;
+    let officeId: string;
+    
+    if (typeof req.query.status === "object" && req.query.status !== null) {
+      status = (req.query.status as any).status as FolderRejectStatus;
+      officeId = (req.query.status as any).officeId as string;
+    } else {
+      status = req.query.status as FolderRejectStatus;
+      officeId = req.query.officeId as string;
+    }
+    
+    const result = await getAllServices(req, status, officeId);  
     res.json({
       status: "ok",
       message: "success",
@@ -47,7 +58,7 @@ export const getOneFolderControllers = async ( req: Request, res: Response ) => 
   try { 
     const status= req.query.status as FolderRejectStatus; 
     const id = Number(req.params.id);
-    const result = await getOneServices(status, id); 
+    const result = await getOneServices(req, status, id); 
     res.json({
       status: "ok",
       message: "success",

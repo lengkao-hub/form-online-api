@@ -1,5 +1,7 @@
 
 import { FolderRejectStatus } from "@prisma/client";
+import { Request } from "express";
+import { getImagePath } from "src/utils/fileUrl";
 import { prisma } from "../../prisma";
 
 export const getAllService = async (wherefolder: { status: FolderRejectStatus; companyId: number }) => {
@@ -27,31 +29,41 @@ export const getAllService = async (wherefolder: { status: FolderRejectStatus; c
   });
   return data;
 };
-export const getAllServices = async (status: FolderRejectStatus) => { 
+export const getAllServices = async (req: Request, status: FolderRejectStatus, officeId: string) => {
   const data = await prisma.folder.findMany({
     where: {
       status: status,
+      user: {
+        officeId: Number(officeId),
+      },
     },
     include: {
-      user: {
-        select: {
-          id: true,
-          firstName: true,
-          lastName: true,
-          email: true,
-          phone: true,
+      user: true,
+      profile: {
+        include: {
+          profileFile: true,
         },
       },
-      profile: true,
       folderPrice: true,
     },
     orderBy: {
       createdAt: "desc",
     },
   });
-  return data;
+  console.log("data",data);
+  const mapFolderWithProfile = (folder: any) => ({
+    ...folder,
+    profile: folder.profile.map((profile: any) => mapProfileWithImage(req, profile)),
+  });
+  const foldersWithProfileFiles = data.map(mapFolderWithProfile);
+  return foldersWithProfileFiles;
 };
-export const getOneServices = async (status: FolderRejectStatus, id: number) => {
+const mapProfileWithImage = (req: Request, profile: any) => ({
+  ...profile,
+  profileFile: getImagePath({ req, data: profile.profileFile, field: "file" }),
+});
+
+export const getOneServices = async (req: Request, status: FolderRejectStatus, id: number) => {
   const data = await prisma.folder.findFirst({
     where: {
       status: status,
@@ -67,13 +79,21 @@ export const getOneServices = async (status: FolderRejectStatus, id: number) => 
           phone: true,
         },
       },
-      profile: true,
+      profile: {
+        include: {
+          profileFile: true,
+        },
+      },
       folderPrice: true,
     },
     orderBy: {
       createdAt: "desc",
     },
   });
-  return data;
+  const folderWithProfileFiles = {
+    ...data,
+    profile: data?.profile?.map((profile) => mapProfileWithImage(req, profile)),
+  };
+  return folderWithProfileFiles;
 };
 

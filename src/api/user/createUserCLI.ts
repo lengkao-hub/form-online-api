@@ -1,7 +1,8 @@
-import { PrismaClient, Role } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 import { Command } from "commander";
 import inquirer from "inquirer";
 import { hashPassword } from "./lib";
+import { Roles } from "./types";
 
 const prisma = new PrismaClient();
 const program = new Command();
@@ -63,8 +64,8 @@ const promptUserDetails = async () => {
       type: "list",
       name: "role",
       message: "Role (e.g., Admin or User):",
-      choices: [Role.ADMIN, Role.SUPER_ADMIN, Role.FINANCE, Role.POLICE_OFFICER, Role.POLICE_COMMANDER, Role.POLICE_PRODUCTION],
-      default: Role.ADMIN,
+      choices: [Roles.ADMIN, Roles.FINANCE, Roles.POLICE_OFFICER, Roles.POLICE_COMMANDER, Roles.POLICE_PRODUCTION],
+      default: Roles.ADMIN,
     },
   ]);
 
@@ -112,8 +113,9 @@ export const createUserService = async (user: {
   email: string;
   phone: string;
   password: string;
-  role: Role;
-  username: string
+  role: string;
+  username: string;
+  officeId?: number;
 }) => {
   try {
     return await prisma.user.create({
@@ -124,8 +126,9 @@ export const createUserService = async (user: {
         email: user.email,
         phone: user.phone,
         password: user.password,
-        role: user.role,
+        role: user.role as any,
         isActive: true,
+        officeId: user.officeId ?? 1,
       },
     });
   } catch (error: any) {

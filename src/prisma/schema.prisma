@@ -30,20 +30,31 @@ model user {
   deletedAt    DateTime?     @db.Timestamp(6)
   username     String?       @unique
   companyId    Int?
+  officeId     Int
   folder       folder[]
   profile      profile[]
-  folderPrices folderPrice[]
+  folderPrices folderPrice[]  
+  companyFiles companyFile[]  
 
   @@index([email])
   @@index([createdAt])
   @@index([updatedAt])
 }
-
+model companyFile {
+  id            Int         @id @default(autoincrement())
+  userId Int
+  name          String?
+  file      String?
+  createdAt     DateTime?   @db.Timestamp(6)
+  updatedAt     DateTime?   @updatedAt @db.Timestamp(6)
+  deletedAt     DateTime?   @db.Timestamp(6)
+  user         user         @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_application")
+}
 model folder {
   id          Int           @id @default(autoincrement())
   userId      Int
   companyId   Int?
-  content     String?
+  comment     String?
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
   user        user          @relation(fields: [userId], references: [id])
@@ -108,6 +119,7 @@ model profile {
   user               user?              @relation(fields: [userId], references: [id])
   folderPrice        folderPrice?       @relation(fields: [folderPriceId], references: [id])
   folderPriceId      Int?
+  profileFile       profileFile[]
 
   @@index([nationalityId])
   @@index([ethnicityId])
@@ -117,6 +129,16 @@ model profile {
   @@index([updatedAt])
 }
 
+model profileFile {
+  id            Int         @id @default(autoincrement())
+  profileId     Int
+  name          String?
+  file      String?
+  createdAt     DateTime?   @db.Timestamp(6)
+  updatedAt     DateTime?   @updatedAt @db.Timestamp(6)
+  deletedAt     DateTime?   @db.Timestamp(6)
+  Profile      profile      @relation(fields: [profileId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
 model number {
   id          Int       @id @default(autoincrement())
   number      String
@@ -133,78 +155,24 @@ model number {
   @@index([createdAt])
   @@index([updatedAt])
 }
-
-enum folderType {
-  YELLOW
-  BLUE
-}
-
-enum processStatus {
-  DEFAULT
-  PENDING
-  APPROVED_BY_POLICE
-  FINANCE_UNDER_REVIEW
-  POLICE_UNDER_REVIEW
-  IN_PRODUCTION
-  FINISHED
-  REJECTED
-  REJECTED_BY_COMMANDER
-  APPROVED_BY_PROVINCE
-  APPROVED_BY_HQ
-}
-
-enum applicationStatus {
-  DEFAULT
-  APPROVED
-  PROCESS
-  FINISHED
-}
-
-enum applicationType {
-  NEW
-  RENEW
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
 }
 
 enum Role {
   ADMIN
-  USER
-  FINANCE
-  POLICE_OFFICER
-  POLICE_COMMANDER
-  POLICE_PRODUCTION
-  VERSIFICATION_OFFICER
-  SUPER_ADMIN
-  POLICE_COMMANDER_PROVINCE
-
+  USER  
   @@map("Role")
 }
-
-enum Gender {
-  MALE
-  FEMALE
-}
-
-enum PaymentMethod {
-  CASH
-  MONEY_TRANSFER
-}
-
-enum ActionType {
-  CREATE
-  UPDATE
-  DELETE
-  PATCH
-}
-
+ 
+ 
 enum FolderRejectStatus {
   PENDING
   APPROVED
   REJECTED
   APPROVED_BY_POLICE
+  REJECTED_BY_POLICE
 }
-
-enum applicationDependBy {
-  COMPANY
-  VILLAGE
-}
-
+ 

@@ -5,12 +5,12 @@ const SIX_MONTHS = 6;
 const MIN_VALID_YEAR = 1900;
 
 export const aggregationChartProfileServices = async ({
-  officeId,
+  companyId,
 }: {
-  officeId: number;
+  companyId: number;
 }) => {
   try {
-    const result = await getAggregatedProfileData({ officeId });
+    const result = await getAggregatedProfileData({ companyId });
     return result;
   } catch (error) {
     logger.error("Error in aggregationChartProfileServices:", error);
@@ -18,27 +18,27 @@ export const aggregationChartProfileServices = async ({
   };
 };
 const getAggregatedProfileData = async ({
-  officeId,
+  companyId,
 }: {
-  officeId: number;
+  companyId: number;
 }): Promise<{ month: string; male: number; female: number }[]> => {
   const currentDate = new Date();
   const sixMonthsAgo = new Date(currentDate);
   sixMonthsAgo.setMonth(currentDate.getMonth() - SIX_MONTHS);
   const profiles = await fetchProfilesCreatedInLastSixMonths(
     sixMonthsAgo,
-    officeId,
+    companyId,
   );
   const months = generateLastSixMonths();
   return aggregateProfilesByGender(profiles, months);
 };
 const fetchProfilesCreatedInLastSixMonths = async (
   sixMonthsAgo: Date,
-  officeId: number,
+  companyId: number,
 ) => {
   const whereWithOffice =
-  officeId !== null && !Number.isNaN(officeId) && officeId !== 0
-    ? { officeId }
+  companyId !== null && !Number.isNaN(companyId) && companyId !== 0
+    ? { companyId }
     : {};
   return prisma.profile.findMany({
     where: {
@@ -103,12 +103,12 @@ export const aggregationProfileServices = async ({
   start,
   end,
   year,
-  officeId,
+  companyId,
 }: {
   start: string;
   end: string;
   year: number,
-  officeId: number | null;
+  companyId: number | null;
 }) => {
   try {
     const startDate = new Date(start);
@@ -124,39 +124,40 @@ export const aggregationProfileServices = async ({
         },
       }
       : {}; 
-    const whereWithOffice = officeId !== null && !Number.isNaN(officeId) && officeId !== 0
-      ? { officeId }
-      : null;
+    const whereWithCompanyId = companyId !== null && !Number.isNaN(companyId) && companyId !== 0
+      ? { companyId }
+      : {};
+    console.log("whereWithCompanyId:", whereWithCompanyId);
     const [total, maleCounts, femaleCounts, newProfilesCount, femaleNewProfilesCount] = await Promise.all([
       prisma.profile.count({
         where: {
-          ...whereWithOffice,
+          ...whereWithCompanyId,
           ...yearFilter,
         },
       }),
       prisma.profile.count({
         where: {
-          ...whereWithOffice,
+          ...whereWithCompanyId,
           gender: { in: ["MALE", "M"] },
           ...yearFilter,
         },
       }),
       prisma.profile.count({
         where: {
-          ...whereWithOffice,
+          ...whereWithCompanyId,
           gender: { in: ["FEMALE", "F"] },
           ...yearFilter,
         },
       }),
       prisma.profile.count({
         where: {
-          ...whereWithOffice,
+          ...whereWithCompanyId,
           createdAt: { gte: startDate, lte: endDate },
         },
       }),
       prisma.profile.count({
         where: {
-          ...whereWithOffice,
+          ...whereWithCompanyId,
           createdAt: { gte: startDate, lte: endDate },
           gender: { in: ["FEMALE", "F"] },
         },

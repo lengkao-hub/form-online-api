@@ -9,12 +9,13 @@ export interface IGetAllProfilesServiceProps {
   year?: string,
   date?: Date,
   deletedAt?: any,
-  status?: any
+  status?: any,
+  companyId?: number
 }
 export interface UpdateStatusParams {
   folderId: number;
   status: FolderRejectStatus;
-  content?: string;
+  comment?: string;
 }
 export interface CreateNewCardServiceParams {
   companyId: number;

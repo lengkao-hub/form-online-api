@@ -8,10 +8,8 @@ export const getAggregationChartProfileController = async (
   res: Response,
 ) => {
   try {
-    const { officeId } = req.query;
-    const aggregationResult = await aggregationChartProfileServices({
-      officeId: Number(officeId),
-    }); 
+    const { companyId } = req.query;
+    const aggregationResult = await aggregationChartProfileServices({ companyId: Number(companyId) }); 
     res.json({
       status: "ok",
       message: "Success",
@@ -34,12 +32,13 @@ export const getAggregationProfileController = async (
   res: Response,
 ) => {
   try {
-    const { start, end, officeId, year } = req.query;
+    const { start, end, companyId, year } = req.query;
+    console.log("Received query parameters:", { start, end, companyId, year });
     const aggregationResult = await aggregationProfileServices({
       start: start as string,
       end: end as string,
       year: Number(year),
-      officeId: Number(officeId),
+      companyId: Number(companyId),
     });
     res.json({
       status: "ok",

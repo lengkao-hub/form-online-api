@@ -12,15 +12,14 @@ import { CreateNewCardServiceParams, IGetAllProfilesServiceProps, IGetOneProfile
 export const getAllProfilesService = async ({
   page, limit, paginate, search, gender, year, date, companyId, req, userId,
 }: IGetAllProfilesServiceProps & { req: Request, companyId?: number, userId?: number }) => {
-  try {
-     
+  try { 
     const whereClause = buildWhereClause({ search, gender, year, date, companyId, userId });
     const queryFn = async (skip: number, take: number) => {
       const data = await prisma.profile.findMany({
         skip,
         take,
-        where: { 
-          ...whereClause,
+        where: {
+          ...whereClause, 
         },
         include: {
           folder: {
@@ -34,6 +33,7 @@ export const getAllProfilesService = async ({
       const totalCount = await prisma.profile.count({
         where: whereClause,
       });
+      console.log("data :", data);
       return [data, totalCount];
     };
     const paginationResult = await PaginateCalucations({ page, limit, queryFn, paginate });
@@ -50,17 +50,41 @@ export const getAllProfilesService = async ({
     await prisma.$disconnect();
   }
 };
+export const getCompopoxService = async ({
+  search, companyId, userId, 
+}: { req: Request, search?: string, companyId?: number, userId?: number }) => {
+  try {  
+    const whereClause = buildWhereClause({ search, companyId, userId }); 
+    const result = await prisma.profile.findMany({ 
+      where: { 
+        ...whereClause, 
+        folderId: null,
+      }, 
+      orderBy: { createdAt: "desc" },
+    }); 
+    return result; 
+  } catch (error) {
+    logger.error(error);
+  } finally {
+    await prisma.$disconnect();
+  }
+};
 export const getApprovedService = async ({
-  page, limit, paginate, search, gender, year, date, status, req, userId,
+  page, limit, paginate, search, gender, year, date, status, req, userId, companyId,
 }: IGetAllProfilesServiceProps & { req: Request, userId: number }) => {
   try {
-    const whereClause = buildWhereClause({  search, gender, year, date, userId });
+    const whereClause = buildWhereClause({ search, gender, year, date, userId });
+    const userOfficeFilter = companyId && !Number.isNaN(companyId) && companyId !== 0
+      ? { user: { is: { companyId } } }
+      : {};
+    console.log("companyId :", userOfficeFilter);
     const queryFn = async (skip: number, take: number) => {
       const data = await prisma.profile.findMany({
         skip,
         take,
         where: {
-          ...whereClause, 
+          ...whereClause,
+          ...userOfficeFilter,
           folder: {
             status: {
               in: status,
@@ -144,9 +168,22 @@ export const getOneProfileService = async ({ id, req }: { id: number | string, r
       {
         id: profileId,
       },
+      include: {
+        profileFile: {
+          where: { deletedAt: null },
+          select: {
+            id: true,
+            file: true,
+            name: true,
+          },
+        },
+      },
     }); 
-    const dataWithImagePath = getImagePath({ req, data, field: "image" }); 
-    const result = resolveImageUrls({ records: dataWithImagePath, fields: ["gallery.image"], request: req, nestedKey: "profileGallery", nestedImageField: "gallery.image" });
+    const datas = getImagePath({ req, data, field: "image" });  
+    const result = {
+      ...datas,
+      profileFile: getImagePath({ req, data: data?.profileFile, field: "file" }),
+    };
     return { result };
   } catch (error) {
     logger.error("Error in getOneProfileService:", error);
@@ -227,14 +264,27 @@ export const createNewCardService = async ({
 };
 export const editProfileService = async ({
   data,
+  profileFileId,
   id,
   tx,
 }: {
   data: Omit<profile, "id">;
+  profileFileId: number[];
   id: number;
   tx: Prisma.TransactionClient
 }) => {
   try {
+    await tx.profileFile.updateMany({
+      data: {
+        deletedAt: new Date(),
+      },
+      where: {
+        profileId: id,
+        id: {
+          notIn: profileFileId,
+        },
+      },
+    }); 
     const editProfileRes = await tx.profile.update({
       where: { id },
       data,
@@ -248,7 +298,7 @@ export const editProfileService = async ({
 export const editStatusService = async ({
   folderId,
   status,
-  content,
+  comment,
 }: UpdateStatusParams) => {
 
   if (!folderId) {
@@ -260,7 +310,7 @@ export const editStatusService = async ({
     },
     data: {
       status: status,                     // enum
-      content: content ?? null,           // ต้องเป็น string หรือ null
+      comment: comment ?? null,           // ต้องเป็น string หรือ null
     },
   }); 
   return updatedFolder;

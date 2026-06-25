@@ -1,6 +1,7 @@
 import { Prisma, Role } from "@prisma/client";
 import bcrypt from "bcrypt";
 
+import { prisma } from "../../prisma";
 import { findOneUserServicer } from "./service";
 import { UserRecord } from "./types";
 
@@ -11,7 +12,7 @@ export const buildUserRecord = async (data: UserRecord) => {
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(password, saltRounds);
     userRecord.password = hashedPassword;
-  }
+  } 
   return userRecord;
 };
 
@@ -30,23 +31,34 @@ export const buildNewUser = ({
   role,
   username,
   isActive,
-}: any, companyId: number) => ({
+  companyId,
+  officeId,
+}: any) => ({
   firstName,
   lastName,
   phone,
   username,
-  email,
-  companyId,
+  email, 
+  companyId: Number(companyId),
+  officeId: Number(officeId),
   password: hashedPassword,
   role: role || Role.ADMIN,
-  isActive: isActive ?? true,
+  isActive: isActive === "true" || isActive === true,
   updatedAt: new Date(),
   createdAt: new Date(),
   deletedAt: null,
 });
 
 export const isPhoneNumberTaken = async (phone: string): Promise<boolean> => {
-  const user = await findOneUserServicer(phone);
+  const user = await prisma.user.findFirst({
+    where: { phone },
+    select: { id: true },
+  });
+  return !!user;
+};
+
+export const isUsernameTaken = async (username: string): Promise<boolean> => {
+  const user = await findOneUserServicer(username);
   return !!user;
 };
 
@@ -65,9 +77,11 @@ export const buildPayload = (user: any) => ({
 export const buildWhereClause = ({
   search,
   companyId,
+  role,
 }: {
   search?: any;
   companyId?: number;
+  role?: any;
 }): Prisma.userWhereInput => {
   const whereClause: Prisma.userWhereInput = {};
   if (search) {
@@ -81,5 +95,26 @@ export const buildWhereClause = ({
   if (companyId) {
     whereClause.companyId = companyId;
   }
+  if (role) {
+    whereClause.role = role;
+  }
   return whereClause;
+};
+
+export const createCompanyFiles = async (
+  tx: any, 
+  userId: number, 
+  files: { name: string; file: string }[],
+) => {
+  if (!files || files.length === 0) {
+    return;
+  }
+
+  return await tx.companyFile.createMany({
+    data: files.map((file) => ({
+      userId: userId,
+      name: file.name,
+      file: file.file,
+    })),
+  });
 };

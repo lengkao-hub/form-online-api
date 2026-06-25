@@ -21,4 +21,5 @@ export const buildPayload = (user: any) => ({
   companyId: user.companyId,
   lastName: user.lastName,
   username: user.username,
+  officeId: user.officeId,
 });

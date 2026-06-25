@@ -21,16 +21,29 @@ Table user {
   deletedAt DateTime
   username String [unique]
   companyId Int
+  officeId Int [not null]
   folder folder [not null]
   profile profile [not null]
   folderPrices folderPrice [not null]
+  companyFiles companyFile [not null]
+}
+
+Table companyFile {
+  id Int [pk, increment]
+  userId Int [not null]
+  name String
+  file String
+  createdAt DateTime
+  updatedAt DateTime
+  deletedAt DateTime
+  user user [not null]
 }
 
 Table folder {
   id Int [pk, increment]
   userId Int [not null]
   companyId Int
-  content String
+  comment String
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
   user user [not null]
@@ -89,6 +102,18 @@ Table profile {
   user user
   folderPrice folderPrice
   folderPriceId Int
+  profileFile profileFile [not null]
+}
+
+Table profileFile {
+  id Int [pk, increment]
+  profileId Int [not null]
+  name String
+  file String
+  createdAt DateTime
+  updatedAt DateTime
+  deletedAt DateTime
+  Profile profile [not null]
 }
 
 Table number {
@@ -104,64 +129,15 @@ Table number {
   folder folder [not null]
 }
 
-Enum folderType {
-  YELLOW
-  BLUE
-}
-
-Enum processStatus {
-  DEFAULT
-  PENDING
-  APPROVED_BY_POLICE
-  FINANCE_UNDER_REVIEW
-  POLICE_UNDER_REVIEW
-  IN_PRODUCTION
-  FINISHED
-  REJECTED
-  REJECTED_BY_COMMANDER
-  APPROVED_BY_PROVINCE
-  APPROVED_BY_HQ
-}
-
-Enum applicationStatus {
-  DEFAULT
-  APPROVED
-  PROCESS
-  FINISHED
-}
-
-Enum applicationType {
-  NEW
-  RENEW
+Enum Gender {
+  MALE
+  FEMALE
+  OTHER
 }
 
 Enum Role {
   ADMIN
   USER
-  FINANCE
-  POLICE_OFFICER
-  POLICE_COMMANDER
-  POLICE_PRODUCTION
-  VERSIFICATION_OFFICER
-  SUPER_ADMIN
-  POLICE_COMMANDER_PROVINCE
-}
-
-Enum Gender {
-  MALE
-  FEMALE
-}
-
-Enum PaymentMethod {
-  CASH
-  MONEY_TRANSFER
-}
-
-Enum ActionType {
-  CREATE
-  UPDATE
-  DELETE
-  PATCH
 }
 
 Enum FolderRejectStatus {
@@ -169,12 +145,10 @@ Enum FolderRejectStatus {
   APPROVED
   REJECTED
   APPROVED_BY_POLICE
+  REJECTED_BY_POLICE
 }
 
-Enum applicationDependBy {
-  COMPANY
-  VILLAGE
-}
+Ref: companyFile.userId > user.id [delete: No Action]
 
 Ref: folder.userId > user.id
 
@@ -187,5 +161,7 @@ Ref: profile.folderId > folder.id
 Ref: profile.userId > user.id
 
 Ref: profile.folderPriceId > folderPrice.id
+
+Ref: profileFile.profileId > profile.id [delete: No Action]
 
 Ref: number.folderId > folder.id

@@ -271,34 +271,31 @@ export const buildReportWhereClause = ({
 
   return whereClause;
 };
-// Helper function ສຳລັບປະມວນຜົນ files
-const processItemFiles = (files: any[]): string => {
-  const filePaths: string[] = [];
-  for (const file of files) {
-    const path = typeof file === "string" ? file : file.path;
-    filePaths.push(path);
+// Helper function ສຳລັບສ້າງ profileFile records
+const createProfileFileRecords = ({
+  tx,
+  profileId,
+  files,
+  promises,
+}: {
+  tx: any;
+  profileId: number;
+  files: { file: string; name?: string }[];
+  promises: any[];
+}) => {
+  for (const fileInfo of files) {
+    const createFilePromise = tx.profileFile.create({
+      data: {
+        profileId,
+        name: fileInfo.name || null,
+        file: fileInfo.file,
+      },
+    });
+    promises.push(createFilePromise);
   }
-  return JSON.stringify(filePaths);
 };
 
-// Helper function ສຳລັບສ້າງ update data
-const createUpdateData = (
-  item: any,
-  folderId: number,
-  folderPriceId: number,
-) => {
-  const updateData: any = { 
-    folderId,
-    folderPriceId,
-  };
-
-  if (item.files && item.files.length > 0) {
-    updateData.files = processItemFiles(item.files);
-  }
-
-  return updateData;
-}; 
-// Main function
+// Main function - ອັບເດດ profile ແລະ ບັນທຶກໄຟລ໌ໃສ່ profileFile table
 export const processRecordItems = (
   tx: any,
   recordData: any,
@@ -307,13 +304,20 @@ export const processRecordItems = (
   const promises: any[] = [];
 
   for (const item of recordData.items) {
-    const updateData = createUpdateData(item, folderId, recordData.folderPriceId);
-
-    const promise = tx.profile.update({
+    // ອັບເດດ profile ດ້ວຍ folderId ແລະ folderPriceId
+    const updatePromise = tx.profile.update({
       where: { id: item.id },
-      data: updateData,
+      data: {
+        folderId,
+        folderPriceId: recordData.folderPriceId,
+      },
     });
-    promises.push(promise);
+    promises.push(updatePromise);
+
+    // ສ້າງ profileFile records ສຳລັບແຕ່ລະໄຟລ໌
+    if (item.files && item.files.length > 0) {
+      createProfileFileRecords({ tx, profileId: item.id, files: item.files, promises });
+    }
   }
 
   return promises;
